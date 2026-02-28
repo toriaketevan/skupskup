@@ -1,0 +1,31 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: anabana-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: anabana123
+      MYSQL_DATABASE: anabana
+      MYSQL_USER: anabana
+      MYSQL_PASSWORD: anabana123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: anabana-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: anabana
+      PMA_PASSWORD: anabana123
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql_data:
