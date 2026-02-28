@@ -320,5 +320,9 @@ app.post('/users/:id/progress/:lessonId', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+module.exports = { app, pool };
+
+if (require.main === module) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
+}
