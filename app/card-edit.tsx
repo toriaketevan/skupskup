@@ -15,9 +15,9 @@ import { useAuthUser } from '../store/auth';
 import { fetchCard, updateCard, deleteCard, type CardData } from '../api/cards';
 import TracingReader from '../components/TracingReader';
 import {
-  CARD_TYPES, CONTENT_FIELDS,
-  type PageDraft,
-  parseBookPages, contentToFieldValues, buildContent,
+  CARD_TYPES, CONTENT_FIELDS, NEW_LETTER_SECTIONS,
+  type PageDraft, type NLSection,
+  parseBookPages, contentToFieldValues, buildContent, getDefaultNLSections,
 } from '../constants/cards';
 import BookPageEditor from '../components/BookPageEditor';
 
@@ -34,6 +34,7 @@ export default function CardEditScreen() {
   const [title, setTitle]             = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookPages, setBookPages]     = useState<PageDraft[]>([{ text: '', image: '' }]);
+  const [nlSections, setNlSections]   = useState<Record<string, NLSection>>(getDefaultNLSections());
   const [loading, setLoading]         = useState(true);
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
@@ -61,6 +62,15 @@ export default function CardEditScreen() {
         } else {
           setFieldValues(contentToFieldValues(c.type, content));
         }
+        if (c.type === 'new_letter') {
+          const defaults = getDefaultNLSections();
+          const saved = content.sections ?? {};
+          const merged: Record<string, NLSection> = {};
+          for (const s of NEW_LETTER_SECTIONS) {
+            merged[s.key] = { ...defaults[s.key], ...saved[s.key] };
+          }
+          setNlSections(merged);
+        }
       })
       .catch((err) => {
         console.log('[card-edit] fetch error:', err);
@@ -87,7 +97,9 @@ export default function CardEditScreen() {
     try {
       const content = card.type === 'book'
         ? { pages: bookPages.filter(p => p.text.trim() || p.image.trim()) }
-        : buildContent(card.type, fieldValues);
+        : card.type === 'new_letter'
+          ? { ...buildContent(card.type, fieldValues), sections: nlSections }
+          : buildContent(card.type, fieldValues);
       await updateCard(card.id, { title: title.trim() || undefined, content });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -210,6 +222,66 @@ export default function CardEditScreen() {
                   />
                 </View>
               ))}
+
+              {/* New letter: section editors */}
+              {card.type === 'new_letter' && (
+                <View style={styles.sectionsBlock}>
+                  <Text style={styles.sectionsHeader}>სექციები</Text>
+                  {NEW_LETTER_SECTIONS.map(s => {
+                    const sec = nlSections[s.key];
+                    return (
+                      <View key={s.key} style={styles.sectionCard}>
+                        <Text style={styles.sectionName}>{s.defaultTitle}</Text>
+
+                        {/* Hide toggle */}
+                        <Pressable
+                          style={styles.checkRow}
+                          onPress={() => setNlSections(prev => ({
+                            ...prev,
+                            [s.key]: { ...prev[s.key], hidden: !prev[s.key].hidden },
+                          }))}
+                        >
+                          <View style={[styles.checkbox, sec.hidden && styles.checkboxChecked]}>
+                            {sec.hidden && <Text style={styles.checkmark}>✓</Text>}
+                          </View>
+                          <Text style={styles.checkLabel}>ამ სექციის დამალვა</Text>
+                        </Pressable>
+
+                        {/* Title */}
+                        <View style={styles.field}>
+                          <Text style={styles.fieldLabel}>სათაური</Text>
+                          <TextInput
+                            style={styles.input}
+                            value={sec.title}
+                            onChangeText={v => setNlSections(prev => ({
+                              ...prev, [s.key]: { ...prev[s.key], title: v },
+                            }))}
+                            placeholder={s.defaultTitle}
+                            placeholderTextColor="#9CA3AF"
+                          />
+                        </View>
+
+                        {/* Video URL (only for video sections) */}
+                        {s.hasVideo && (
+                          <View style={styles.field}>
+                            <Text style={styles.fieldLabel}>ვიდეო URL</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={sec.video_url ?? ''}
+                              onChangeText={v => setNlSections(prev => ({
+                                ...prev, [s.key]: { ...prev[s.key], video_url: v },
+                              }))}
+                              placeholder="https://..."
+                              placeholderTextColor="#9CA3AF"
+                              autoCapitalize="none"
+                            />
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </>
           )}
 
@@ -295,6 +367,23 @@ const styles = StyleSheet.create({
     color: '#A78BFA',
     textAlign: 'center',
   },
+
+  sectionsBlock: { gap: 12 },
+  sectionsHeader: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.4 },
+  sectionCard: {
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB',
+    borderRadius: 12, padding: 14, gap: 10,
+  },
+  sectionName: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  checkbox: {
+    width: 20, height: 20, borderRadius: 5,
+    borderWidth: 1.5, borderColor: '#D1D5DB',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  checkboxChecked: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
+  checkmark: { fontSize: 12, color: '#fff', fontWeight: '700' },
+  checkLabel: { fontSize: 14, color: '#374151' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   dialog:  { width: 300, backgroundColor: '#fff', borderRadius: 16, padding: 24, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },

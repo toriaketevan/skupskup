@@ -84,6 +84,21 @@ describe('POST /lessons', () => {
     expect(res.body.title).toBe('New');
   });
 
+  it('stores description when provided', async () => {
+    const created = { id: 11, title: 'New', description: 'About this', sort_order: 2 };
+    mockQuery(
+      [[{ maxOrder: 1 }]],
+      [{ insertId: 11 }],
+      [[created]],
+    );
+
+    const res = await request(app)
+      .post('/lessons')
+      .send({ title: 'New', description: 'About this' });
+    expect(res.status).toBe(201);
+    expect(res.body.description).toBe('About this');
+  });
+
   it('returns 400 when title is missing', async () => {
     const res = await request(app).post('/lessons').send({});
     expect(res.status).toBe(400);
@@ -101,6 +116,17 @@ describe('PUT /lessons/:id', () => {
     const res = await request(app).put('/lessons/3').send({ title: 'Updated' });
     expect(res.status).toBe(200);
     expect(res.body.title).toBe('Updated');
+  });
+
+  it('stores description when provided', async () => {
+    const updated = { id: 3, title: 'Updated', description: 'Some desc', sort_order: 1 };
+    mockQuery([{}], [[updated]]);
+
+    const res = await request(app)
+      .put('/lessons/3')
+      .send({ title: 'Updated', description: 'Some desc' });
+    expect(res.status).toBe(200);
+    expect(res.body.description).toBe('Some desc');
   });
 
   it('returns 400 when title is missing', async () => {
@@ -160,6 +186,32 @@ describe('DELETE /lessons/:id/cards/:cardId', () => {
     const res = await request(app).delete('/lessons/1/cards/5');
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+  });
+});
+
+describe('PUT /lessons/:id/cards/reorder', () => {
+  it('updates sort_order for each card and returns success', async () => {
+    // One UPDATE query per card (3 cards)
+    mockQuery([{}], [{}], [{}]);
+    const res = await request(app)
+      .put('/lessons/1/cards/reorder')
+      .send({ cardIds: [3, 1, 2] });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('returns 400 when cardIds is not an array', async () => {
+    const res = await request(app)
+      .put('/lessons/1/cards/reorder')
+      .send({ cardIds: 'not-an-array' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when cardIds is missing', async () => {
+    const res = await request(app)
+      .put('/lessons/1/cards/reorder')
+      .send({});
+    expect(res.status).toBe(400);
   });
 });
 

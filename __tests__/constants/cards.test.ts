@@ -7,7 +7,89 @@ import {
   parseBookPages,
   contentToFieldValues,
   buildContent,
+  NEW_LETTER_SECTIONS,
+  getDefaultNLSections,
 } from '../../constants/cards';
+
+// ─── NEW_LETTER_SECTIONS ───────────────────────────────────────────────────────
+
+describe('NEW_LETTER_SECTIONS', () => {
+  it('contains exactly 5 sections', () => {
+    expect(NEW_LETTER_SECTIONS).toHaveLength(5);
+  });
+
+  it('has the correct keys in order', () => {
+    expect(NEW_LETTER_SECTIONS.map(s => s.key)).toEqual([
+      'instruction_video',
+      'intro_video',
+      'say_sound_parent',
+      'say_sound_kid',
+      'what_letter',
+    ]);
+  });
+
+  it('marks first two sections as hasVideo true', () => {
+    expect(NEW_LETTER_SECTIONS[0].hasVideo).toBe(true);
+    expect(NEW_LETTER_SECTIONS[1].hasVideo).toBe(true);
+  });
+
+  it('marks last three sections as hasVideo false', () => {
+    expect(NEW_LETTER_SECTIONS[2].hasVideo).toBe(false);
+    expect(NEW_LETTER_SECTIONS[3].hasVideo).toBe(false);
+    expect(NEW_LETTER_SECTIONS[4].hasVideo).toBe(false);
+  });
+
+  it('each section has a non-empty defaultTitle', () => {
+    for (const s of NEW_LETTER_SECTIONS) {
+      expect(typeof s.defaultTitle).toBe('string');
+      expect(s.defaultTitle.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+// ─── getDefaultNLSections ──────────────────────────────────────────────────────
+
+describe('getDefaultNLSections', () => {
+  it('returns an entry for every section', () => {
+    const defaults = getDefaultNLSections();
+    for (const s of NEW_LETTER_SECTIONS) {
+      expect(defaults).toHaveProperty(s.key);
+    }
+  });
+
+  it('sets hidden to false for all sections', () => {
+    const defaults = getDefaultNLSections();
+    for (const s of NEW_LETTER_SECTIONS) {
+      expect(defaults[s.key].hidden).toBe(false);
+    }
+  });
+
+  it('pre-fills title with defaultTitle for each section', () => {
+    const defaults = getDefaultNLSections();
+    for (const s of NEW_LETTER_SECTIONS) {
+      expect(defaults[s.key].title).toBe(s.defaultTitle);
+    }
+  });
+
+  it('includes video_url (empty string) only for hasVideo sections', () => {
+    const defaults = getDefaultNLSections();
+    for (const s of NEW_LETTER_SECTIONS) {
+      if (s.hasVideo) {
+        expect(defaults[s.key]).toHaveProperty('video_url', '');
+      } else {
+        expect(defaults[s.key]).not.toHaveProperty('video_url');
+      }
+    }
+  });
+
+  it('returns a new object on each call (no shared reference)', () => {
+    const a = getDefaultNLSections();
+    const b = getDefaultNLSections();
+    expect(a).not.toBe(b);
+    a['instruction_video'].hidden = true;
+    expect(b['instruction_video'].hidden).toBe(false);
+  });
+});
 
 // ─── parseBookPages ────────────────────────────────────────────────────────────
 

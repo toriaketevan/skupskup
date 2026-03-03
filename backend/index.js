@@ -29,6 +29,14 @@ pool.query(`
   )
 `).catch(err => console.error('Migration error:', err.message));
 
+// Add description column to lessons if it doesn't exist yet
+pool.query(`ALTER TABLE lessons ADD COLUMN description TEXT DEFAULT NULL`)
+  .catch(err => { if (err.code !== 'ER_DUP_FIELDNAME') console.error('Migration error (description):', err.message); });
+
+// Rename legacy English lesson titles to Georgian
+pool.query(`UPDATE lessons SET title = REPLACE(title, 'Lesson ', 'გაკვეთილი ') WHERE title LIKE 'Lesson %'`)
+  .catch(err => console.error('Migration error (rename lessons):', err.message));
+
 // GET /lessons
 app.get('/lessons', async (req, res) => {
   try {
@@ -96,15 +104,32 @@ app.delete('/lessons/:id/cards/:cardId', async (req, res) => {
   }
 });
 
+// PUT /lessons/:id/cards/reorder
+app.put('/lessons/:id/cards/reorder', async (req, res) => {
+  try {
+    const { cardIds } = req.body;
+    if (!Array.isArray(cardIds)) return res.status(400).json({ error: 'cardIds must be an array' });
+    for (let i = 0; i < cardIds.length; i++) {
+      await pool.query(
+        'UPDATE lesson_cards SET sort_order = ? WHERE lesson_id = ? AND card_id = ?',
+        [i + 1, req.params.id, cardIds[i]]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /lessons
 app.post('/lessons', async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: 'title is required' });
     const [[{ maxOrder }]] = await pool.query('SELECT COALESCE(MAX(sort_order), 0) AS maxOrder FROM lessons');
     const [result] = await pool.query(
-      'INSERT INTO lessons (title, sort_order) VALUES (?, ?)',
-      [title, maxOrder + 1]
+      'INSERT INTO lessons (title, description, sort_order) VALUES (?, ?, ?)',
+      [title, description ?? null, maxOrder + 1]
     );
     const [[row]] = await pool.query('SELECT * FROM lessons WHERE id = ?', [result.insertId]);
     res.status(201).json(row);
@@ -116,9 +141,12 @@ app.post('/lessons', async (req, res) => {
 // PUT /lessons/:id
 app.put('/lessons/:id', async (req, res) => {
   try {
-    const { title } = req.body;
+    const { title, description } = req.body;
     if (!title) return res.status(400).json({ error: 'title is required' });
-    await pool.query('UPDATE lessons SET title = ? WHERE id = ?', [title, req.params.id]);
+    await pool.query(
+      'UPDATE lessons SET title = ?, description = ? WHERE id = ?',
+      [title, description ?? null, req.params.id]
+    );
     const [[row]] = await pool.query('SELECT * FROM lessons WHERE id = ?', [req.params.id]);
     if (!row) return res.status(404).json({ error: 'not found' });
     res.json(row);

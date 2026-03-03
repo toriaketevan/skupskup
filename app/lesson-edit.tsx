@@ -17,6 +17,7 @@ import {
   fetchLessonCards,
   removeCardFromLesson,
   addCardToLesson,
+  reorderLessonCards,
   type Lesson,
 } from '../api/lessons';
 import { fetchCards, type CardData, type Card } from '../api/cards';
@@ -27,10 +28,34 @@ function typeMeta(type: Card) {
   return CARD_TYPES.find(t => t.key === type)!;
 }
 
-function AssignedCardRow({ card, onEdit, onRemove }: { card: CardData; onEdit: () => void; onRemove: () => void }) {
+function AssignedCardRow({
+  card, onEdit, onRemove, onMoveUp, onMoveDown, isFirst, isLast,
+}: {
+  card: CardData; onEdit: () => void; onRemove: () => void;
+  onMoveUp: () => void; onMoveDown: () => void;
+  isFirst: boolean; isLast: boolean;
+}) {
   const m = typeMeta(card.type);
   return (
     <View style={styles.cardRow}>
+      {/* Reorder arrows */}
+      <View style={styles.reorderBtns}>
+        <Pressable
+          style={[styles.reorderBtn, isFirst && styles.reorderBtnDisabled]}
+          onPress={onMoveUp}
+          disabled={isFirst}
+        >
+          <Text style={[styles.reorderBtnText, isFirst && styles.reorderBtnTextDisabled]}>↑</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.reorderBtn, isLast && styles.reorderBtnDisabled]}
+          onPress={onMoveDown}
+          disabled={isLast}
+        >
+          <Text style={[styles.reorderBtnText, isLast && styles.reorderBtnTextDisabled]}>↓</Text>
+        </Pressable>
+      </View>
+
       <View style={[styles.badge, { backgroundColor: m.color + '20' }]}>
         <Text style={styles.badgeEmoji}>{m.emoji}</Text>
         <Text style={[styles.badgeLabel, { color: m.color }]}>{m.label}</Text>
@@ -72,6 +97,7 @@ export default function LessonEditScreen() {
 
   const [lesson, setLesson]               = useState<Lesson | null>(null);
   const [titleValue, setTitleValue]       = useState('');
+  const [descValue, setDescValue]         = useState('');
   const [saving, setSaving]               = useState(false);
   const [saved, setSaved]                 = useState(false);
   const [assignedCards, setAssignedCards] = useState<CardData[]>([]);
@@ -89,6 +115,7 @@ export default function LessonEditScreen() {
     ]).then(([les, assigned, all]) => {
       setLesson(les);
       setTitleValue(les.title);
+      setDescValue(les.description ?? '');
       setAssignedCards(assigned);
       setAllCards(all);
     }).catch(() => {
@@ -108,7 +135,7 @@ export default function LessonEditScreen() {
     if (!lesson || !titleValue.trim()) return;
     setSaving(true);
     try {
-      const updated = await updateLesson(lesson.id, titleValue.trim());
+      const updated = await updateLesson(lesson.id, titleValue.trim(), descValue.trim() || undefined);
       setLesson(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -135,6 +162,14 @@ export default function LessonEditScreen() {
   function handleCardDeleted(cardId: number) {
     setAllCards(prev => prev.filter(c => c.id !== cardId));
     setAssignedCards(prev => prev.filter(c => c.id !== cardId));
+  }
+
+  async function moveCard(index: number, direction: 'up' | 'down') {
+    const next = [...assignedCards];
+    const swap = direction === 'up' ? index - 1 : index + 1;
+    [next[index], next[swap]] = [next[swap], next[index]];
+    setAssignedCards(next);
+    await reorderLessonCards(lessonId, next.map(c => c.id));
   }
 
   const unassignedCards = allCards.filter(c => !assignedCards.some(a => a.id === c.id));
@@ -165,7 +200,7 @@ export default function LessonEditScreen() {
         <View style={styles.center}><Text style={styles.errorText}>{error}</Text></View>
       ) : (
         <ScrollView contentContainerStyle={styles.body}>
-          {/* Name */}
+          {/* Name + description */}
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>გაკვეთილის სახელი</Text>
             <View style={styles.nameRow}>
@@ -186,6 +221,16 @@ export default function LessonEditScreen() {
                 }
               </Pressable>
             </View>
+            <Text style={[styles.sectionTitle, { marginTop: 12 }]}>აღწერა</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              value={descValue}
+              onChangeText={setDescValue}
+              placeholder="გაკვეთილის მოკლე აღწერა (არასავალდებულო)"
+              placeholderTextColor="#9CA3AF"
+              multiline
+              textAlignVertical="top"
+            />
           </View>
 
           {/* Assigned cards */}
@@ -194,12 +239,16 @@ export default function LessonEditScreen() {
             {assignedCards.length === 0 ? (
               <Text style={styles.emptyText}>ბარათები ჯერ არ არის მინიჭებული.</Text>
             ) : (
-              assignedCards.map(card => (
+              assignedCards.map((card, i) => (
                 <AssignedCardRow
                   key={card.id}
                   card={card}
                   onEdit={() => setEditingCardId(card.id)}
                   onRemove={() => handleRemove(card)}
+                  onMoveUp={() => moveCard(i, 'up')}
+                  onMoveDown={() => moveCard(i, 'down')}
+                  isFirst={i === 0}
+                  isLast={i === assignedCards.length - 1}
                 />
               ))
             )}
@@ -265,6 +314,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 8,
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: '#111827',
   },
+  inputMultiline: { minHeight: 80 },
   saveBtn: {
     backgroundColor: '#374151', paddingHorizontal: 18,
     paddingVertical: 10, borderRadius: 8,
@@ -276,6 +326,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6',
   },
+
+  reorderBtns: { flexDirection: 'column', gap: 2 },
+  reorderBtn: {
+    width: 24, height: 24, borderRadius: 6,
+    backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center',
+  },
+  reorderBtnDisabled: { backgroundColor: 'transparent' },
+  reorderBtnText: { fontSize: 13, color: '#374151', lineHeight: 16 },
+  reorderBtnTextDisabled: { color: '#D1D5DB' },
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, minWidth: 130,

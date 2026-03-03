@@ -53,6 +53,27 @@ export function contentToFieldValues(type: Card, content: Record<string, any>): 
   return values;
 }
 
+// ─── New Letter sections ──────────────────────────────────────────────────────
+
+export const NEW_LETTER_SECTIONS = [
+  { key: 'instruction_video', defaultTitle: 'ინსტრუქციის ვიდეო',              hasVideo: true  },
+  { key: 'intro_video',       defaultTitle: 'ახალი ასოს ვიდეო',               hasVideo: true  },
+  { key: 'say_sound_parent',  defaultTitle: 'წარმოთქვი ბგერა (მშობლისთვის)', hasVideo: false },
+  { key: 'say_sound_kid',     defaultTitle: 'წარმოთქვი ბგერა (ბავშვისთვის)', hasVideo: false },
+  { key: 'what_letter',       defaultTitle: 'რომელი ასოა?',                   hasVideo: false },
+] as const;
+
+export type NLSection = { hidden: boolean; title: string; video_url?: string };
+
+export function getDefaultNLSections(): Record<string, NLSection> {
+  return Object.fromEntries(
+    NEW_LETTER_SECTIONS.map(s => [
+      s.key,
+      { hidden: false, title: s.defaultTitle, ...(s.hasVideo ? { video_url: '' } : {}) },
+    ])
+  );
+}
+
 export function buildContent(type: Card, values: Record<string, string>): Record<string, any> {
   const content: Record<string, any> = {};
   for (const field of CONTENT_FIELDS[type]) {

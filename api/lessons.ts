@@ -6,6 +6,7 @@ export type Lesson = {
   id: number;
   title: string;
   sort_order: number;
+  description?: string | null;
 };
 
 export async function fetchLessons(): Promise<Lesson[]> {
@@ -24,11 +25,11 @@ export async function createLesson(title: string): Promise<Lesson> {
   return res.json();
 }
 
-export async function updateLesson(id: number, title: string): Promise<Lesson> {
+export async function updateLesson(id: number, title: string, description?: string): Promise<Lesson> {
   const res = await fetch(`${BASE}/lessons/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify({ title, description }),
   });
   if (!res.ok) throw new Error(`Failed to update lesson: ${res.status}`);
   return res.json();
@@ -59,4 +60,13 @@ export async function addCardToLesson(lessonId: number, cardId: number): Promise
 export async function removeCardFromLesson(lessonId: number, cardId: number): Promise<void> {
   const res = await fetch(`${BASE}/lessons/${lessonId}/cards/${cardId}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Failed to remove card from lesson: ${res.status}`);
+}
+
+export async function reorderLessonCards(lessonId: number, cardIds: number[]): Promise<void> {
+  const res = await fetch(`${BASE}/lessons/${lessonId}/cards/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cardIds }),
+  });
+  if (!res.ok) throw new Error(`Failed to reorder lesson cards: ${res.status}`);
 }

@@ -19,6 +19,8 @@ import { fetchLesson, fetchLessonCards, type Lesson } from '../../api/lessons';
 import { useAuthUser } from '../../store/auth';
 import type { CardData } from '../../api/cards';
 import TracingReader from '../../components/TracingReader';
+import LetterWritingViewer from '../../components/LetterWritingViewer';
+import { NEW_LETTER_SECTIONS, getDefaultNLSections, type NLSection } from '../../constants/cards';
 
 const CARD_W = 200;
 const CARD_H = 280;
@@ -317,12 +319,64 @@ const bk = StyleSheet.create({
 
 // ─── New Letter viewer ────────────────────────────────────────────────────────
 
+function VideoPlaceholder({ url }: { url?: string }) {
+  return (
+    <View style={nl.videoBox}>
+      <Text style={nl.videoIcon}>▶</Text>
+      <Text style={nl.videoHint}>{url || 'ვიდეო არ არის მითითებული'}</Text>
+    </View>
+  );
+}
+
 function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => void }) {
   const c = card.content ?? {};
-  const letter      = String(c.letter       ?? '');
-  const phoneme     = String(c.phoneme      ?? '');
-  const exampleWord = String(c.example_word ?? '');
-  const hasFastSound = Boolean(c.fast_sound);
+  const letter = String(c.letter ?? '');
+  const rawSections: Record<string, NLSection> = c.sections ?? getDefaultNLSections();
+
+  const visibleSteps = NEW_LETTER_SECTIONS
+    .map(s => {
+      const defaults = { hidden: false, title: s.defaultTitle, ...(s.hasVideo ? { video_url: '' } : {}) };
+      return { ...s, data: { ...defaults, ...rawSections[s.key] } as NLSection };
+    })
+    .filter(s => !s.data.hidden);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [pageHeight, setPageHeight] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  function goTo(i: number) {
+    const clamped = Math.max(0, Math.min(i, visibleSteps.length - 1));
+    setActiveIdx(clamped);
+    if (pageHeight > 0) {
+      scrollRef.current?.scrollTo({ y: clamped * pageHeight, animated: true });
+    }
+  }
+
+  function handleScroll(e: any) {
+    if (pageHeight === 0) return;
+    const page = Math.round(e.nativeEvent.contentOffset.y / pageHeight);
+    setActiveIdx(Math.max(0, Math.min(page, visibleSteps.length - 1)));
+  }
+
+  function renderContent(s: typeof visibleSteps[0]) {
+    if (s.key === 'instruction_video' || s.key === 'intro_video') {
+      return <VideoPlaceholder url={(s.data as any).video_url} />;
+    }
+    if (s.key === 'say_sound_parent' || s.key === 'say_sound_kid') {
+      return (
+        <View style={nl.tracingBox}>
+          {letter
+            ? <TracingReader text={letter} fontSize={100} accentColor="#A5B4FC" textColor="#fff" />
+            : <Text style={nl.emptyLetter}>—</Text>
+          }
+        </View>
+      );
+    }
+    if (s.key === 'what_letter') {
+      return <Text style={nl.bigLetter}>{letter || '—'}</Text>;
+    }
+    return null;
+  }
 
   return (
     <Modal visible animationType="fade" transparent>
@@ -336,54 +390,60 @@ function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => voi
             <Text style={nl.closeBtnText}>✕</Text>
           </Pressable>
 
-          {/* Heading */}
-          {card.title ? <Text style={nl.heading}>{card.title}</Text> : null}
+          {/* Body row: bullets | paged content | arrows */}
+          <View style={nl.bodyRow}>
 
-          {/* Card */}
-          <View style={nl.card}>
-            {/* Letter + tracing slider(s) */}
-            <View style={[nl.letterBox, hasFastSound && nl.letterBoxRow]}>
-              {letter ? (
-                <>
-                  <TracingReader text={letter} fontSize={100} accentColor="#6366F1" textColor="#1E1B4B" />
-                  {hasFastSound && (
-                    <>
-                      <View style={nl.letterDivider} />
-                      <TracingReader text={letter} fontSize={100} accentColor="#6366F1" textColor="#1E1B4B" fastSound />
-                    </>
-                  )}
-                </>
-              ) : (
-                <Text style={nl.emptyLetter}>—</Text>
-              )}
+            {/* Left: bullet nav, centered vertically */}
+            <View style={nl.bulletNav}>
+              {visibleSteps.map((_, i) => (
+                <Pressable key={i} onPress={() => goTo(i)} style={nl.bulletBtn}>
+                  <View style={[nl.bullet, i === activeIdx && nl.bulletActive]} />
+                </Pressable>
+              ))}
             </View>
 
-            {(phoneme || exampleWord) && <View style={nl.divider} />}
+            {/* Center: full-page snapping scroll */}
+            <ScrollView
+              ref={scrollRef}
+              style={nl.scrollArea}
+              pagingEnabled
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              showsVerticalScrollIndicator={false}
+              onLayout={e => setPageHeight(e.nativeEvent.layout.height)}
+            >
+              {visibleSteps.map((s) => (
+                <View
+                  key={s.key}
+                  style={[nl.page, pageHeight > 0 && { height: pageHeight }]}
+                >
+                  {/* Title pinned to top */}
+                  <Text style={nl.sectionTitle}>{s.data.title}</Text>
+                  {/* Content centered in remaining space */}
+                  <View style={nl.pageContent}>
+                    {renderContent(s)}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
 
-            {/* Phoneme */}
-            {phoneme ? (
-              <View style={nl.infoRow}>
-                <Text style={nl.infoLabel}>ბგერა</Text>
-                <Text style={nl.infoValue}>{phoneme}</Text>
-              </View>
-            ) : null}
+            {/* Right: ↑↓ arrows stacked, centered vertically */}
+            <View style={nl.arrowCol}>
+              <Pressable
+                style={({ pressed }) => [nl.arrowBtn, pressed && { opacity: 0.7 }]}
+                onPress={() => goTo(activeIdx - 1)}
+              >
+                <Text style={nl.arrowText}>↑</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [nl.arrowBtn, pressed && { opacity: 0.7 }]}
+                onPress={() => goTo(activeIdx + 1)}
+              >
+                <Text style={nl.arrowText}>↓</Text>
+              </Pressable>
+            </View>
 
-            {/* Example word */}
-            {exampleWord ? (
-              <View style={nl.infoRow}>
-                <Text style={nl.infoLabel}>სიტყვა</Text>
-                <Text style={nl.infoValue}>{exampleWord}</Text>
-              </View>
-            ) : null}
           </View>
-
-          {/* Done */}
-          <Pressable
-            style={({ pressed }) => [nl.doneBtn, pressed && { opacity: 0.85 }]}
-            onPress={onClose}
-          >
-            <Text style={nl.doneBtnText}>✓ დასრულება</Text>
-          </Pressable>
         </SafeAreaView>
       </View>
     </Modal>
@@ -391,22 +451,11 @@ function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => voi
 }
 
 const nl = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: '#1E1B4B',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  safe: {
-    flex: 1, width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 20,
-    paddingHorizontal: 24,
-  },
+  overlay: { flex: 1, backgroundColor: '#1E1B4B' },
+  safe:    { flex: 1, paddingTop: 60 },
 
   closeBtn: {
-    position: 'absolute', top: 12, left: 20,
+    position: 'absolute', top: 12, left: 16,
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center', alignItems: 'center',
@@ -414,69 +463,79 @@ const nl = StyleSheet.create({
   },
   closeBtnText: { fontSize: 20, color: '#fff', fontWeight: '700' },
 
-  heading: {
-    fontSize: 18, fontWeight: '700',
-    color: 'rgba(196,181,253,0.9)',
-    textAlign: 'center',
-  },
+  bodyRow: { flex: 1, flexDirection: 'row' },
 
-  card: {
-    width: '100%',
-    maxWidth: 680,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 36,
-    paddingHorizontal: 36,
+  // Left bullet nav — centered vertically
+  bulletNav: {
+    width: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.45,
-    shadowRadius: 20,
-    elevation: 12,
+  },
+  bulletBtn: { padding: 6 },
+  bullet: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: 'rgba(255,220,150,0.25)',
+  },
+  bulletActive: {
+    backgroundColor: 'rgba(255,220,150,0.9)',
+    width: 13, height: 13, borderRadius: 7,
   },
 
-  letterBox: {
+  // Full-page scroll
+  scrollArea: { flex: 1 },
+  page: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingTop: 28,
+    paddingBottom: 20,
   },
-  letterBoxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 0,
-  },
-  letterDivider: {
-    width: 1,
+  sectionTitle: {
+    fontSize: 17, fontWeight: '700',
+    color: 'rgba(196,181,253,0.9)',
+    textAlign: 'center',
+    marginBottom: 12,
     alignSelf: 'stretch',
-    backgroundColor: '#E5E7EB',
-    marginHorizontal: 40,
   },
+  pageContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  // Video placeholder — constrained, centered
+  videoBox: {
+    width: 300, height: 180,
+    backgroundColor: '#1F2937', borderRadius: 16,
+    justifyContent: 'center', alignItems: 'center', gap: 12,
+  },
+  videoIcon: { fontSize: 44, color: 'rgba(255,255,255,0.55)' },
+  videoHint: { fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', paddingHorizontal: 12 },
+
+  // TracingReader wrapper
+  tracingBox: { alignItems: 'center', paddingVertical: 8 },
   emptyLetter: { fontSize: 80, color: '#D1D5DB' },
 
-  divider: { width: '85%', height: 1, backgroundColor: '#E5E7EB' },
+  // What letter section
+  bigLetter: {
+    fontSize: 140, fontWeight: '800',
+    color: '#fff', textAlign: 'center',
+  },
 
-  infoRow: {
-    flexDirection: 'row',
+  // Right arrow col — stacked, centered vertically
+  arrowCol: {
+    width: 48,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    width: '100%',
   },
-  infoLabel: {
-    fontSize: 11, fontWeight: '700', color: '#9CA3AF',
-    textTransform: 'uppercase', letterSpacing: 0.5,
-    width: 56,
+  arrowBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center', alignItems: 'center',
   },
-  infoValue: { fontSize: 22, fontWeight: '600', color: '#1F2937', flex: 1 },
-
-  doneBtn: {
-    backgroundColor: '#6366F1',
-    paddingVertical: 14, paddingHorizontal: 40,
-    borderRadius: 50,
-    shadowColor: '#4338CA',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 5,
-  },
-  doneBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  arrowText: { fontSize: 18, color: '#fff', fontWeight: '700' },
 });
 
 // ─── Generic card popup ───────────────────────────────────────────────────────
@@ -576,6 +635,8 @@ export default function LessonScreen() {
         <BookViewer card={openCard.card} onClose={() => setOpenCard(null)} />
       ) : openCard && openCard.card.type === 'new_letter' ? (
         <NewLetterViewer card={openCard.card} onClose={() => setOpenCard(null)} />
+      ) : openCard && openCard.card.type === 'letter_writing' ? (
+        <LetterWritingViewer card={openCard.card} onClose={() => setOpenCard(null)} />
       ) : openCard ? (
         <CardPopup
           card={openCard.card}

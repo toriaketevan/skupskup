@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
@@ -58,6 +58,7 @@ export default function LessonsScreen() {
   const [contentWidth, setContentWidth] = useState(0);
   const [lessons, setLessons]           = useState<Lesson[]>([]);
   const [loading, setLoading]           = useState(true);
+  const [popupLesson, setPopupLesson]   = useState<Lesson | null>(null);
   const { completedIds, unlockedSortOrder } = useProgress();
 
   // Reload lessons when screen gains focus (in case admin changed them)
@@ -65,11 +66,38 @@ export default function LessonsScreen() {
     fetchLessons().then(setLessons).finally(() => setLoading(false));
   }, []));
 
-  const positions   = contentWidth > 0 ? buildPositions(contentWidth, lessons.length) : [];
+  const positions    = contentWidth > 0 ? buildPositions(contentWidth, lessons.length) : [];
   const canvasHeight = PAD_TOP + Math.max(0, lessons.length - 1) * STEP_Y + PAD_TOP + BTN;
+
+  function openLesson(lesson: Lesson) {
+    router.push(`/lesson/${lesson.id}`);
+    setPopupLesson(null);
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
+      {/* Lesson info popup */}
+      {popupLesson && (
+        <Modal visible animationType="fade" transparent>
+          <Pressable style={styles.popupOverlay} onPress={() => setPopupLesson(null)}>
+            <Pressable style={styles.popupCard} onPress={() => {}}>
+              <Text style={styles.popupTitle}>{popupLesson.title}</Text>
+              {popupLesson.description ? (
+                <Text style={styles.popupDesc}>{popupLesson.description}</Text>
+              ) : null}
+              <Pressable
+                style={({ pressed }) => [styles.popupBtn, pressed && { opacity: 0.85 }]}
+                onPress={() => openLesson(popupLesson)}
+              >
+                <Text style={styles.popupBtnText}>
+                  {completedIds.has(popupLesson.id) ? '🔄 თავიდან თამაში' : '▶ დაწყება'}
+                </Text>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#fff" />
@@ -106,7 +134,7 @@ export default function LessonsScreen() {
                     { left: pos.x - BTN / 2, top: pos.y - BTN / 2 },
                     pressed && unlocked && styles.btnPressed,
                   ]}
-                  onPress={() => unlocked && router.push(`/lesson/${lesson.id}`)}
+                  onPress={() => unlocked && setPopupLesson(lesson)}
                   disabled={!unlocked}
                 >
                   <Text style={styles.btnText}>{lesson.sort_order}</Text>
@@ -158,4 +186,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#F59E0B', justifyContent: 'center', alignItems: 'center',
   },
   badgeIcon: { fontSize: 11 },
+
+  popupOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  popupCard: {
+    width: '82%', maxWidth: 360,
+    backgroundColor: '#fff', borderRadius: 20,
+    padding: 28, gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3, shadowRadius: 20, elevation: 12,
+    alignItems: 'center',
+  },
+  popupLabel: {
+    fontSize: 12, fontWeight: '700', color: '#9CA3AF',
+    textTransform: 'uppercase', letterSpacing: 0.8,
+  },
+  popupTitle: {
+    fontSize: 22, fontWeight: '800', color: '#1F2937', textAlign: 'center',
+  },
+  popupDesc: {
+    fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 21,
+  },
+  popupBtn: {
+    marginTop: 6,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 14, paddingHorizontal: 36,
+    borderRadius: 50,
+    shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
+  },
+  popupBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
 });
