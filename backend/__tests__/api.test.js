@@ -196,6 +196,77 @@ describe('POST /cards', () => {
   });
 });
 
+describe('GET /cards/:id', () => {
+  it('returns a single card', async () => {
+    const card = { id: 7, type: 'new_letter', title: 'ა', content: '{"letter":"ა"}', sort_order: 1 };
+    mockQuery([[card]]);
+
+    const res = await request(app).get('/cards/7');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(card);
+  });
+
+  it('returns 404 when card is not found', async () => {
+    mockQuery([[undefined]]);
+    const res = await request(app).get('/cards/999');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 500 on db error', async () => {
+    db.query.mockRejectedValue(new Error('db fail'));
+    const res = await request(app).get('/cards/1');
+    expect(res.status).toBe(500);
+  });
+});
+
+describe('PUT /cards/:id', () => {
+  it('updates card title and returns the card', async () => {
+    const updated = { id: 3, type: 'book', title: 'ახალი', content: '{}', sort_order: 1 };
+    mockQuery(
+      [{}],          // UPDATE
+      [[updated]],   // SELECT *
+    );
+
+    const res = await request(app).put('/cards/3').send({ title: 'ახალი' });
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe('ახალი');
+  });
+
+  it('updates card content', async () => {
+    const updated = { id: 4, type: 'new_letter', title: null, content: '{"letter":"ბ"}', sort_order: 2 };
+    mockQuery([{}], [[updated]]);
+
+    const res = await request(app).put('/cards/4').send({ content: { letter: 'ბ' } });
+    expect(res.status).toBe(200);
+  });
+
+  it('returns 400 when body has no updatable fields', async () => {
+    const res = await request(app).put('/cards/3').send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when card no longer exists after update', async () => {
+    mockQuery([{}], [[undefined]]);
+    const res = await request(app).put('/cards/99').send({ title: 'x' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /cards/:id', () => {
+  it('deletes a card and returns success', async () => {
+    mockQuery([{}]);
+    const res = await request(app).delete('/cards/5');
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('returns 500 on db error', async () => {
+    db.query.mockRejectedValue(new Error('db fail'));
+    const res = await request(app).delete('/cards/5');
+    expect(res.status).toBe(500);
+  });
+});
+
 // ─── /auth/login ──────────────────────────────────────────────────────────────
 
 describe('POST /auth/login', () => {

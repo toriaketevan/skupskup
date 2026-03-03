@@ -260,6 +260,17 @@ app.post('/cards', async (req, res) => {
   }
 });
 
+// GET /cards/:id
+app.get('/cards/:id', async (req, res) => {
+  try {
+    const [[row]] = await pool.query('SELECT * FROM cards WHERE id = ?', [req.params.id]);
+    if (!row) return res.status(404).json({ error: 'not found' });
+    res.json(row);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /cards/:id
 app.put('/cards/:id', async (req, res) => {
   try {

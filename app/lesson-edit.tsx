@@ -15,43 +15,19 @@ import {
   fetchLesson,
   updateLesson,
   fetchLessonCards,
-  addCardToLesson,
   removeCardFromLesson,
+  addCardToLesson,
   type Lesson,
 } from '../api/lessons';
-import { fetchCards, type Card, type CardType } from '../api/cards';
+import { fetchCards, type CardData, type Card } from '../api/cards';
+import CardEditSheet from '../components/CardEditSheet';
+import { CARD_TYPES } from '../constants/cards';
 
-const CARD_TYPES: { key: CardType; label: string; emoji: string; color: string }[] = [
-  { key: 'new_letter',     label: 'ახალი ასო',           emoji: '🔤', color: '#6366F1' },
-  { key: 'sound_story',    label: 'ბგერის ისტორია',      emoji: '🔊', color: '#EC4899' },
-  { key: 'letter_writing', label: 'ასოს წერა',           emoji: '✍️',  color: '#F59E0B' },
-  { key: 'word_reading',   label: 'სიტყვის კითხვა',      emoji: '📖', color: '#10B981' },
-  { key: 'book',           label: 'წიგნი',               emoji: '📚', color: '#3B82F6' },
-  { key: 'letter_review',  label: 'ასოების გამეორება',   emoji: '🔁', color: '#8B5CF6' },
-  { key: 'alphabet_song',  label: 'ანბანის სიმღერა',     emoji: '🎵', color: '#EF4444' },
-  { key: 'quick_check',    label: 'სწრაფი შემოწმება',    emoji: '✅', color: '#14B8A6' },
-  { key: 'comprehension',  label: 'გაგება-გააზრება',     emoji: '🧠', color: '#F97316' },
-];
-
-function typeMeta(type: CardType) {
+function typeMeta(type: Card) {
   return CARD_TYPES.find(t => t.key === type)!;
 }
 
-function CardRow({
-  card,
-  action,
-  actionLabel,
-  actionStyle,
-  actionTextStyle,
-  onPress,
-}: {
-  card: Card;
-  action: string;
-  actionLabel: string;
-  actionStyle: object;
-  actionTextStyle: object;
-  onPress: () => void;
-}) {
+function AssignedCardRow({ card, onEdit, onRemove }: { card: CardData; onEdit: () => void; onRemove: () => void }) {
   const m = typeMeta(card.type);
   return (
     <View style={styles.cardRow}>
@@ -60,8 +36,30 @@ function CardRow({
         <Text style={[styles.badgeLabel, { color: m.color }]}>{m.label}</Text>
       </View>
       <Text style={styles.cardTitle} numberOfLines={1}>{card.title || '—'}</Text>
-      <Pressable style={({ pressed }) => [actionStyle, pressed && { opacity: 0.7 }]} onPress={onPress}>
-        <Text style={actionTextStyle}>{actionLabel}</Text>
+      <Pressable style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.7 }]} onPress={onEdit}>
+        <Text style={styles.editBtnText}>რედ.</Text>
+      </Pressable>
+      <Pressable style={({ pressed }) => [styles.removeBtn, pressed && { opacity: 0.7 }]} onPress={onRemove}>
+        <Text style={styles.removeBtnText}>მოხსნა</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function UnassignedCardRow({ card, onEdit, onAssign }: { card: CardData; onEdit: () => void; onAssign: () => void }) {
+  const m = typeMeta(card.type);
+  return (
+    <View style={styles.cardRow}>
+      <View style={[styles.badge, { backgroundColor: m.color + '20' }]}>
+        <Text style={styles.badgeEmoji}>{m.emoji}</Text>
+        <Text style={[styles.badgeLabel, { color: m.color }]}>{m.label}</Text>
+      </View>
+      <Text style={styles.cardTitle} numberOfLines={1}>{card.title || '—'}</Text>
+      <Pressable style={({ pressed }) => [styles.editBtn, pressed && { opacity: 0.7 }]} onPress={onEdit}>
+        <Text style={styles.editBtnText}>რედ.</Text>
+      </Pressable>
+      <Pressable style={({ pressed }) => [styles.assignBtn, pressed && { opacity: 0.7 }]} onPress={onAssign}>
+        <Text style={styles.assignBtnText}>დამატება</Text>
       </Pressable>
     </View>
   );
@@ -76,10 +74,11 @@ export default function LessonEditScreen() {
   const [titleValue, setTitleValue]       = useState('');
   const [saving, setSaving]               = useState(false);
   const [saved, setSaved]                 = useState(false);
-  const [assignedCards, setAssignedCards] = useState<Card[]>([]);
-  const [allCards, setAllCards]           = useState<Card[]>([]);
+  const [assignedCards, setAssignedCards] = useState<CardData[]>([]);
+  const [allCards, setAllCards]           = useState<CardData[]>([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState<string | null>(null);
+  const [editingCardId, setEditingCardId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!lessonId) return;
@@ -118,21 +117,37 @@ export default function LessonEditScreen() {
     }
   }
 
-  async function handleAdd(card: Card) {
-    await addCardToLesson(lessonId, card.id);
-    setAssignedCards(prev => [...prev, card]);
-  }
-
-  async function handleRemove(card: Card) {
+  async function handleRemove(card: CardData) {
     await removeCardFromLesson(lessonId, card.id);
     setAssignedCards(prev => prev.filter(c => c.id !== card.id));
   }
 
-  const assignedIds = new Set(assignedCards.map(c => c.id));
-  const unassignedCards = allCards.filter(c => !assignedIds.has(c.id));
+  async function handleAssign(card: CardData) {
+    await addCardToLesson(lessonId, card.id);
+    setAssignedCards(prev => [...prev, card]);
+  }
+
+  function handleCardSaved(updated: CardData) {
+    setAllCards(prev => prev.map(c => c.id === updated.id ? updated : c));
+    setAssignedCards(prev => prev.map(c => c.id === updated.id ? updated : c));
+  }
+
+  function handleCardDeleted(cardId: number) {
+    setAllCards(prev => prev.filter(c => c.id !== cardId));
+    setAssignedCards(prev => prev.filter(c => c.id !== cardId));
+  }
+
+  const unassignedCards = allCards.filter(c => !assignedCards.some(a => a.id === c.id));
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
+      <CardEditSheet
+        cardId={editingCardId}
+        onClose={() => setEditingCardId(null)}
+        onSaved={handleCardSaved}
+        onDeleted={handleCardDeleted}
+      />
+
       {/* Header */}
       <View style={styles.header}>
         <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/admin')} style={styles.backBtn}>
@@ -180,38 +195,38 @@ export default function LessonEditScreen() {
               <Text style={styles.emptyText}>ბარათები ჯერ არ არის მინიჭებული.</Text>
             ) : (
               assignedCards.map(card => (
-                <CardRow
+                <AssignedCardRow
                   key={card.id}
                   card={card}
-                  action="remove"
-                  actionLabel="წაშლა"
-                  actionStyle={styles.removeBtn}
-                  actionTextStyle={styles.removeBtnText}
-                  onPress={() => handleRemove(card)}
+                  onEdit={() => setEditingCardId(card.id)}
+                  onRemove={() => handleRemove(card)}
                 />
               ))
             )}
           </View>
 
-          {/* Available cards */}
+          {/* Unassigned cards */}
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>ხელმისაწვდომი ბარათები ({unassignedCards.length})</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>ხელმისაწვდომი ბარათები ({unassignedCards.length})</Text>
+              <Pressable style={({ pressed }) => [styles.newCardBtn, pressed && { opacity: 0.8 }]} onPress={() => router.push('/card-add')}>
+                <Text style={styles.newCardBtnText}>+ ახალი ბარათი</Text>
+              </Pressable>
+            </View>
             {unassignedCards.length === 0 ? (
-              <Text style={styles.emptyText}>ყველა ბარათი უკვე მინიჭებულია.</Text>
+              <Text style={styles.emptyText}>ყველა ბარათი მინიჭებულია.</Text>
             ) : (
               unassignedCards.map(card => (
-                <CardRow
+                <UnassignedCardRow
                   key={card.id}
                   card={card}
-                  action="add"
-                  actionLabel="+ დამატება"
-                  actionStyle={styles.addBtn}
-                  actionTextStyle={styles.addBtnText}
-                  onPress={() => handleAdd(card)}
+                  onEdit={() => setEditingCardId(card.id)}
+                  onAssign={() => handleAssign(card)}
                 />
               ))
             )}
           </View>
+
         </ScrollView>
       )}
     </SafeAreaView>
@@ -237,10 +252,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 12, padding: 16,
     gap: 4, borderWidth: 1, borderColor: '#E5E7EB',
   },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   sectionTitle: {
     fontSize: 12, fontWeight: '700', color: '#6B7280',
-    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+    textTransform: 'uppercase', letterSpacing: 0.5,
   },
+  newCardBtn: { backgroundColor: '#374151', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  newCardBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   nameRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   input: {
@@ -255,7 +273,7 @@ const styles = StyleSheet.create({
   saveBtnDone: { backgroundColor: '#10B981' },
 
   cardRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6',
   },
   badge: {
@@ -266,10 +284,14 @@ const styles = StyleSheet.create({
   badgeLabel: { fontSize: 11, fontWeight: '600' },
   cardTitle:  { flex: 1, fontSize: 14, color: '#374151' },
 
-  removeBtn:     { backgroundColor: '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  removeBtnText: { fontSize: 13, fontWeight: '600', color: '#EF4444' },
-  addBtn:        { backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  addBtnText:    { fontSize: 13, fontWeight: '600', color: '#10B981' },
+  editBtn:     { backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  editBtnText: { fontSize: 12, fontWeight: '600', color: '#3B82F6' },
+
+  removeBtn:     { backgroundColor: '#FEF2F2', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  removeBtnText: { fontSize: 12, fontWeight: '600', color: '#EF4444' },
+
+  assignBtn:     { backgroundColor: '#F0FDF4', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  assignBtnText: { fontSize: 12, fontWeight: '600', color: '#10B981' },
 
   emptyText:  { fontSize: 14, color: '#9CA3AF', fontStyle: 'italic', paddingVertical: 4 },
   errorText:  { fontSize: 15, color: '#EF4444', textAlign: 'center', paddingHorizontal: 32 },

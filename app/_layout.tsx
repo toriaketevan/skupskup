@@ -25,6 +25,8 @@ export default function RootLayout() {
           <Stack.Screen name="grownups"    options={{ headerShown: false }} />
           <Stack.Screen name="profile"      options={{ headerShown: false }} />
           <Stack.Screen name="lesson-edit"  options={{ headerShown: false }} />
+          <Stack.Screen name="card-add"     options={{ headerShown: false }} />
+          <Stack.Screen name="card-edit"    options={{ headerShown: false }} />
         </Stack>
         <Sidebar />
       </View>
