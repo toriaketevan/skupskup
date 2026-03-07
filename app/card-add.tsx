@@ -10,10 +10,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import AdminShell from '../components/AdminShell';
 import { useAuthUser } from '../store/auth';
 import { createCard, type Card } from '../api/cards';
 import TracingReader from '../components/TracingReader';
-import { CARD_TYPES, CONTENT_FIELDS, type PageDraft, buildContent } from '../constants/cards';
+import {
+  CARD_TYPES, CONTENT_FIELDS, NEW_LETTER_SECTIONS,
+  type PageDraft, type NLSection,
+  buildContent, getDefaultNLSections,
+} from '../constants/cards';
 import BookPageEditor from '../components/BookPageEditor';
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
@@ -25,12 +30,13 @@ export default function CardAddScreen() {
   const [fieldValues, setFieldValues]   = useState<Record<string, string>>({});
   const [bookPages, setBookPages]       = useState<PageDraft[]>([{ text: '', image: '' }]);
   const [fastSound, setFastSound]       = useState(false);
+  const [nlSections, setNlSections]     = useState<Record<string, NLSection>>(getDefaultNLSections());
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState<string | null>(null);
 
   if (!user || user.role !== 'admin') {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'bottom']}>
         <View style={styles.center}><Text style={styles.errorText}>წვდომა შეზღუდულია.</Text></View>
       </SafeAreaView>
     );
@@ -48,6 +54,7 @@ export default function CardAddScreen() {
       setFieldValues({});
       setBookPages([{ text: '', image: '' }]);
       setFastSound(false);
+      setNlSections(getDefaultNLSections());
       setError(null);
     } else {
       router.canGoBack() ? router.back() : router.replace('/admin');
@@ -61,7 +68,9 @@ export default function CardAddScreen() {
     try {
       const content = selectedType === 'book'
         ? { pages: bookPages.filter(p => p.text.trim() || p.image.trim()) }
-        : { ...buildContent(selectedType, fieldValues), ...(selectedType === 'new_letter' ? { fast_sound: fastSound } : {}) };
+        : selectedType === 'new_letter'
+          ? { ...buildContent(selectedType, fieldValues), fast_sound: fastSound, sections: nlSections }
+          : buildContent(selectedType, fieldValues);
       await createCard({ type: selectedType, title: title.trim() || undefined, content });
       router.canGoBack() ? router.back() : router.replace('/admin');
     } catch {
@@ -74,18 +83,11 @@ export default function CardAddScreen() {
   const meta = selectedType ? CARD_TYPES.find(t => t.key === selectedType)! : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backBtn}>
-          <Text style={styles.backText}>← უკან</Text>
-        </Pressable>
-        <Text style={styles.title}>
-          {selectedType ? 'ბარათის შექმნა' : 'ბარათის ტიპი'}
-        </Text>
-        <View style={styles.backBtn} />
-      </View>
-
+    <AdminShell
+      title={selectedType ? 'ბარათის შექმნა' : 'ბარათის ტიპი'}
+      activeMenu="cards"
+      onBack={handleBack}
+    >
       <ScrollView contentContainerStyle={styles.body}>
         {!selectedType ? (
           /* Step 1: Type selector */
@@ -167,6 +169,63 @@ export default function CardAddScreen() {
                     />
                   </View>
                 ))}
+
+                {/* New letter: section editors */}
+                {selectedType === 'new_letter' && (
+                  <View style={styles.sectionsBlock}>
+                    <Text style={styles.sectionsHeader}>სექციები</Text>
+                    {NEW_LETTER_SECTIONS.map(s => {
+                      const sec = nlSections[s.key];
+                      return (
+                        <View key={s.key} style={styles.sectionCard}>
+                          <Text style={styles.sectionName}>{s.defaultTitle}</Text>
+
+                          <Pressable
+                            style={styles.checkRow}
+                            onPress={() => setNlSections(prev => ({
+                              ...prev,
+                              [s.key]: { ...prev[s.key], hidden: !prev[s.key].hidden },
+                            }))}
+                          >
+                            <View style={[styles.checkbox, sec.hidden && styles.checkboxChecked]}>
+                              {sec.hidden && <Text style={styles.checkmark}>✓</Text>}
+                            </View>
+                            <Text style={styles.checkLabel}>ამ სექციის დამალვა</Text>
+                          </Pressable>
+
+                          <View style={styles.field}>
+                            <Text style={styles.fieldLabel}>სათაური</Text>
+                            <TextInput
+                              style={styles.input}
+                              value={sec.title}
+                              onChangeText={v => setNlSections(prev => ({
+                                ...prev, [s.key]: { ...prev[s.key], title: v },
+                              }))}
+                              placeholder={s.defaultTitle}
+                              placeholderTextColor="#9CA3AF"
+                            />
+                          </View>
+
+                          {s.hasVideo && (
+                            <View style={styles.field}>
+                              <Text style={styles.fieldLabel}>ვიდეო URL</Text>
+                              <TextInput
+                                style={styles.input}
+                                value={sec.video_url ?? ''}
+                                onChangeText={v => setNlSections(prev => ({
+                                  ...prev, [s.key]: { ...prev[s.key], video_url: v },
+                                }))}
+                                placeholder="https://..."
+                                placeholderTextColor="#9CA3AF"
+                                autoCapitalize="none"
+                              />
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
               </>
             )}
 
@@ -185,22 +244,11 @@ export default function CardAddScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </AdminShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#EAECEF', backgroundColor: '#fff',
-  },
-  backBtn:  { width: 70 },
-  backText: { fontSize: 15, fontWeight: '600', color: '#6366F1' },
-  title:    { fontSize: 18, fontWeight: 'bold', color: '#374151', flex: 1, textAlign: 'center' },
-
   body: { padding: 20, maxWidth: 600, alignSelf: 'center', width: '100%' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
@@ -252,6 +300,14 @@ const styles = StyleSheet.create({
     color: '#A78BFA',
     textAlign: 'center',
   },
+
+  sectionsBlock: { gap: 12 },
+  sectionsHeader: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.4 },
+  sectionCard: {
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB',
+    borderRadius: 12, padding: 14, gap: 10,
+  },
+  sectionName: { fontSize: 14, fontWeight: '700', color: '#374151' },
 
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   checkbox: {

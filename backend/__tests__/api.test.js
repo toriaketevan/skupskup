@@ -242,6 +242,23 @@ describe('POST /cards', () => {
     expect(res.body.type).toBe('book');
   });
 
+  it('stores sections in content when provided', async () => {
+    const sections = {
+      instruction_video: { hidden: false, title: 'ინსტრუქციის ვიდეო', video_url: '' },
+      intro_video:       { hidden: true,  title: 'ახალი ასოს ვიდეო',  video_url: 'https://x.com' },
+      say_sound_parent:  { hidden: false, title: 'წარმოთქვი ბგერა (მშობლისთვის)' },
+      say_sound_kid:     { hidden: false, title: 'წარმოთქვი ბგერა (ბავშვისთვის)' },
+      what_letter:       { hidden: false, title: 'რომელი ასოა?' },
+    };
+    const content = { letter: 'ა', example_word: 'ანა', sections };
+    const stored = { id: 6, type: 'new_letter', title: 'ა', content: JSON.stringify(content), sort_order: 1 };
+    mockQuery([[{ maxOrder: 0 }]], [{ insertId: 6 }], [[stored]]);
+
+    const res = await request(app).post('/cards').send({ type: 'new_letter', title: 'ა', content });
+    expect(res.status).toBe(201);
+    expect(res.body.type).toBe('new_letter');
+  });
+
   it('returns 400 when type is missing', async () => {
     const res = await request(app).post('/cards').send({});
     expect(res.status).toBe(400);
@@ -290,6 +307,20 @@ describe('PUT /cards/:id', () => {
 
     const res = await request(app).put('/cards/4').send({ content: { letter: 'ბ' } });
     expect(res.status).toBe(200);
+  });
+
+  it('stores sections when updating new_letter content', async () => {
+    const sections = {
+      instruction_video: { hidden: true, title: 'ინსტრუქციის ვიდეო', video_url: '' },
+      what_letter:       { hidden: false, title: 'რომელი ასოა?' },
+    };
+    const content = { letter: 'გ', example_word: 'გინა', sections };
+    const updated = { id: 8, type: 'new_letter', title: null, content: JSON.stringify(content), sort_order: 1 };
+    mockQuery([{}], [[updated]]);
+
+    const res = await request(app).put('/cards/8').send({ content });
+    expect(res.status).toBe(200);
+    expect(res.body.content).toBe(JSON.stringify(content));
   });
 
   it('returns 400 when body has no updatable fields', async () => {

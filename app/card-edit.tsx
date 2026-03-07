@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useGlobalSearchParams } from 'expo-router';
+import AdminShell from '../components/AdminShell';
 import { useAuthUser } from '../store/auth';
 import { fetchCard, updateCard, deleteCard, type CardData } from '../api/cards';
 import TracingReader from '../components/TracingReader';
@@ -84,7 +85,7 @@ export default function CardEditScreen() {
 
   if (!user || user.role !== 'admin') {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'bottom']}>
         <View style={styles.center}><Text style={styles.errorText}>წვდომა შეზღუდულია.</Text></View>
       </SafeAreaView>
     );
@@ -125,7 +126,7 @@ export default function CardEditScreen() {
   const meta = card ? CARD_TYPES.find(t => t.key === card.type)! : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'bottom']}>
+    <AdminShell title="ბარათის რედაქტირება" activeMenu="cards">
       {/* Delete confirm modal */}
       <Modal visible={confirmDelete} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -152,15 +153,6 @@ export default function CardEditScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/admin')} style={styles.backBtn}>
-          <Text style={styles.backText}>← უკან</Text>
-        </Pressable>
-        <Text style={styles.title}>ბარათის რედაქტირება</Text>
-        <View style={styles.backBtn} />
-      </View>
 
       {loading ? (
         <View style={styles.center}><ActivityIndicator size="large" color="#374151" /></View>
@@ -306,22 +298,11 @@ export default function CardEditScreen() {
           </Pressable>
         </ScrollView>
       ) : null}
-    </SafeAreaView>
+    </AdminShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#EAECEF', backgroundColor: '#fff',
-  },
-  backBtn:  { width: 70 },
-  backText: { fontSize: 15, fontWeight: '600', color: '#6366F1' },
-  title:    { fontSize: 18, fontWeight: 'bold', color: '#374151', flex: 1, textAlign: 'center' },
-
   body: { padding: 20, gap: 16, maxWidth: 600, alignSelf: 'center', width: '100%' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 

@@ -17,7 +17,7 @@ export const CARD_TYPES: { key: Card; label: string; emoji: string; color: strin
 ];
 
 export const CONTENT_FIELDS: Record<Card, FieldDef[]> = {
-  new_letter:     [{ key: 'letter', label: 'ასო' }, { key: 'phoneme', label: 'ბგერა' }, { key: 'example_word', label: 'სიტყვის მაგალითი' }],
+  new_letter:     [{ key: 'letter', label: 'ასო' }, { key: 'example_word', label: 'სიტყვის მაგალითი' }],
   sound_story:    [{ key: 'text', label: 'ტექსტი', multiline: true }],
   letter_writing: [{ key: 'letter', label: 'ასო' }, { key: 'instructions', label: 'ინსტრუქცია', multiline: true }],
   word_reading:   [{ key: 'words', label: 'სიტყვები (ყოველი ხაზზე)', multiline: true }],

@@ -134,10 +134,9 @@ describe('contentToFieldValues', () => {
   it('converts new_letter fields to strings', () => {
     const result = contentToFieldValues('new_letter', {
       letter: 'ა',
-      phoneme: 'a',
       example_word: 'ანა',
     });
-    expect(result).toEqual({ letter: 'ა', phoneme: 'a', example_word: 'ანა' });
+    expect(result).toEqual({ letter: 'ა', example_word: 'ანა' });
   });
 
   it('joins words array with newlines for word_reading', () => {
@@ -162,7 +161,7 @@ describe('contentToFieldValues', () => {
 
   it('returns empty string for missing fields', () => {
     const result = contentToFieldValues('new_letter', {});
-    expect(result).toEqual({ letter: '', phoneme: '', example_word: '' });
+    expect(result).toEqual({ letter: '', example_word: '' });
   });
 
   it('converts null value to empty string', () => {
@@ -182,10 +181,9 @@ describe('buildContent', () => {
   it('builds new_letter content with string values', () => {
     const result = buildContent('new_letter', {
       letter: 'ბ',
-      phoneme: 'b',
       example_word: 'ბაბა',
     });
-    expect(result).toEqual({ letter: 'ბ', phoneme: 'b', example_word: 'ბაბა' });
+    expect(result).toEqual({ letter: 'ბ', example_word: 'ბაბა' });
   });
 
   it('splits words by newline for word_reading', () => {
@@ -221,7 +219,7 @@ describe('buildContent', () => {
 
   it('uses empty string for missing values', () => {
     const result = buildContent('new_letter', {});
-    expect(result).toEqual({ letter: '', phoneme: '', example_word: '' });
+    expect(result).toEqual({ letter: '', example_word: '' });
   });
 
   it('returns empty object for book (no fields)', () => {

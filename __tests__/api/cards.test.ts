@@ -108,6 +108,26 @@ describe('createCard', () => {
     );
   });
 
+  it('sends sections in content for new_letter type', async () => {
+    const sections = {
+      instruction_video: { hidden: false, title: 'ინსტრუქციის ვიდეო', video_url: '' },
+      intro_video:       { hidden: true,  title: 'ახალი ასოს ვიდეო',  video_url: 'https://example.com' },
+      say_sound_parent:  { hidden: false, title: 'წარმოთქვი ბგერა (მშობლისთვის)' },
+      say_sound_kid:     { hidden: false, title: 'წარმოთქვი ბგერა (ბავშვისთვის)' },
+      what_letter:       { hidden: false, title: 'რომელი ასოა?' },
+    };
+    const content = { letter: 'ა', example_word: 'ანა', sections };
+    const created = { id: 12, type: 'new_letter', title: 'ა', content, sort_order: 3 };
+    mockFetch(201, created);
+    await createCard({ type: 'new_letter', title: 'ა', content });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${BASE}/cards`,
+      expect.objectContaining({
+        body: JSON.stringify({ type: 'new_letter', title: 'ა', content }),
+      })
+    );
+  });
+
   it('throws on failure', async () => {
     mockFetch(400, { error: 'bad request' });
     await expect(createCard({ type: 'book' })).rejects.toThrow('Failed to create card: 400');
@@ -115,6 +135,20 @@ describe('createCard', () => {
 });
 
 describe('updateCard', () => {
+  it('sends updated sections in content for new_letter', async () => {
+    const sections = {
+      instruction_video: { hidden: true, title: 'ინსტრუქციის ვიდეო', video_url: '' },
+      say_sound_parent:  { hidden: false, title: 'ბგერა' },
+    };
+    const content = { letter: 'ბ', example_word: 'ბაბა', sections };
+    mockFetch(200, { id: 5, type: 'new_letter', title: 'ბ', content, sort_order: 1 });
+    await updateCard(5, { content });
+    expect(global.fetch).toHaveBeenCalledWith(
+      `${BASE}/cards/5`,
+      expect.objectContaining({ body: JSON.stringify({ content }) })
+    );
+  });
+
   it('calls PUT /cards/:id and returns updated card', async () => {
     const updated = { id: 5, type: 'new_letter', title: 'გ', content: { letter: 'გ' }, sort_order: 1 };
     mockFetch(200, updated);
