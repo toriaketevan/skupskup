@@ -1,6 +1,4 @@
-// On iOS simulator and web, localhost works.
-// On Android emulator use 10.0.2.2 instead.
-const BASE = 'http://localhost:3001';
+import { API_BASE as BASE } from './config';
 
 export type Lesson = {
   id: number;

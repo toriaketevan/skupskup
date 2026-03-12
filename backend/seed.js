@@ -7,17 +7,17 @@ const bcrypt = require('bcrypt');
 const DB = {
   host:     process.env.DB_HOST     || 'localhost',
   port:     process.env.DB_PORT     || 3306,
-  user:     process.env.DB_USER     || 'anabana',
-  password: process.env.DB_PASSWORD || 'anabana123',
-  database: process.env.DB_NAME     || 'anabana',
+  user:     process.env.DB_USER     || 'skupskup',
+  password: process.env.DB_PASSWORD || 'skupskup123',
+  database: process.env.DB_NAME     || 'skupskup',
 };
 
 async function seed() {
   const conn = await mysql.createConnection(DB);
 
   const users = [
-    { email: 'admin@anabana.ge', password: 'admin123', first: 'Super',  last: 'Admin', role: 'admin' },
-    { email: 'user@anabana.ge',  password: 'user123',  first: 'Demo',   last: 'User',  role: 'user'  },
+    { email: 'admin@skupskup.ge', password: 'admin123', first: 'Super',  last: 'Admin', role: 'admin' },
+    { email: 'user@skupskup.ge',  password: 'user123',  first: 'Demo',   last: 'User',  role: 'user'  },
   ];
 
   for (const u of users) {

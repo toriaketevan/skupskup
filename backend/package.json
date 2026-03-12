@@ -1,5 +1,5 @@
 {
-  "name": "anabana-backend",
+  "name": "skupskup-backend",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -9,10 +9,12 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/__tests__/**/*.test.js"]
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ]
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "mysql2": "^3.9.7"

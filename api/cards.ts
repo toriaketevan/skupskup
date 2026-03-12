@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:3001';
+import { API_BASE as BASE } from './config';
 
 export type Card =
   | 'new_letter' | 'sound_story' | 'letter_writing' | 'word_reading'

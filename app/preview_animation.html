@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dancing Character – Lottie Preview</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #fff0fb 0%, #e8f0ff 100%);
+      font-family: 'Georgia', serif;
+    }
+    h1 {
+      font-size: 1.6rem;
+      color: #3a1f5e;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    p { color: #8b6fa0; font-size: 0.9rem; margin-bottom: 24px; font-style: italic; }
+    #lottie-container {
+      width: 400px;
+      height: 400px;
+      background: white;
+      border-radius: 28px;
+      box-shadow: 0 12px 48px rgba(100, 60, 160, 0.18);
+      overflow: hidden;
+    }
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+    }
+    button {
+      padding: 10px 22px;
+      border: none;
+      border-radius: 50px;
+      background: linear-gradient(135deg, #b388ff, #ff9de2);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(179, 136, 255, 0.35);
+      transition: transform 0.15s;
+    }
+    button:hover { transform: scale(1.05); }
+    .note { margin-top: 18px; font-size: 0.78rem; color: #b0a0c0; }
+  </style>
+</head>
+<body>
+  <h1>🕺 Dancing Character</h1>
+  <p>Whimsical Lottie Animation · 3s loop · 30fps</p>
+  <div id="lottie-container"></div>
+  <div class="controls">
+    <button onclick="anim.play()">▶ Play</button>
+    <button onclick="anim.pause()">⏸ Pause</button>
+    <button onclick="anim.stop(); anim.play()">↺ Restart</button>
+  </div>
+  <p class="note">Use the dancing_character.json file in any Lottie-compatible app</p>
+
+  <script>
+    const animData = fetch('dancing_character.json')
+      .then(r => r.json())
+      .then(data => {
+        window.anim = lottie.loadAnimation({
+          container: document.getElementById('lottie-container'),
+          renderer: 'svg',
+          loop: true,
+          autoplay: true,
+          animationData: data,
+        });
+      })
+      .catch(() => {
+        // Inline fallback if fetch fails (e.g. opened directly)
+        document.getElementById('lottie-container').innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8b6fa0;font-size:0.9rem;text-align:center;padding:24px;">Open this file from a local server<br>or load dancing_character.json directly<br>via the Lottie player below.</div>';
+      });
+  </script>
+</body>
+</html>

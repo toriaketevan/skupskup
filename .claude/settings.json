@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | Select-Object LocalAddress,LocalPort,State,OwningProcess | Format-Table\")",
+      "Bash(powershell -Command \"Stop-Process -Id 27216 -Force; Write-Output ''Killed PID 27216''\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 3001 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_OwningProcess -Force -ErrorAction SilentlyContinue }; Write-Output ''done''\")",
+      "Bash(npm install expo@~55.0.5 expo-router@~55.0.4 @types/jest@29.5.14 jest@~29.7.0)",
+      "Bash(npx expo install --fix)",
+      "Bash(node -e \"const p = require\\(''./node_modules/expo/package.json''\\); console.log\\(''expo installed:'', p.version\\)\")"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 const express = require('express');
 const mysql   = require('mysql2/promise');
-const bcrypt  = require('bcrypt');
+const bcrypt  = require('bcryptjs');
 const cors    = require('cors');
 
 const app = express();
@@ -10,9 +10,9 @@ app.use(express.json());
 const pool = mysql.createPool({
   host:     process.env.DB_HOST     || 'localhost',
   port:     process.env.DB_PORT     || 3306,
-  user:     process.env.DB_USER     || 'anabana',
-  password: process.env.DB_PASSWORD || 'anabana123',
-  database: process.env.DB_NAME     || 'anabana',
+  user:     process.env.DB_USER     || 'skupskup',
+  password: process.env.DB_PASSWORD || 'skupskup123',
+  database: process.env.DB_NAME     || 'skupskup',
   waitForConnections: true,
   connectionLimit: 10,
 });
