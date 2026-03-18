@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import AdminShell from '../components/AdminShell';
+import AdminShell from '../components/admin/AdminShell';
 import { useAuthUser } from '../store/auth';
 import {
   fetchLesson,
@@ -22,7 +22,7 @@ import {
   type Lesson,
 } from '../api/lessons';
 import { fetchCards, type CardData, type Card } from '../api/cards';
-import CardEditSheet from '../components/CardEditSheet';
+import CardEditSheet from '../components/admin/CardEditSheet';
 import { CARD_TYPES } from '../constants/cards';
 
 function typeMeta(type: Card) {

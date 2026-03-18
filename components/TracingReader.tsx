@@ -12,7 +12,6 @@ type Props = {
   fontSize?: number;
   textColor?: string;
   accentColor?: string;
-  fastSound?: boolean;
   onComplete?: () => void;
 };
 
@@ -21,7 +20,6 @@ export default function TracingReader({
   fontSize = 72,
   textColor = '#1F2937',
   accentColor = '#6366F1',
-  fastSound = false,
   onComplete,
 }: Props) {
   const [trackW, setTrackW] = useState(0);
@@ -101,11 +99,6 @@ export default function TracingReader({
             style={[styles.trackFill, { width: fillW, backgroundColor: accentColor + '55' }]}
           />
 
-          {/* Fast-sound indicator — red dot at the midpoint of the track */}
-          {fastSound && (
-            <View style={[styles.fastDot, { left: trackW / 2 - 6 }]} />
-          )}
-
           {/* Draggable thumb */}
           <Animated.View
             style={[styles.thumb, { transform: [{ translateX: posX }] }]}
@@ -156,10 +149,5 @@ const styles = StyleSheet.create({
   },
   thumbText: { color: '#fff', fontSize: 14, fontWeight: '800', lineHeight: 16 },
 
-  fastDot: {
-    position: 'absolute',
-    top: (TRACK_H - 12) / 2,
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: '#EF4444',
-  },
+
 });

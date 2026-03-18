@@ -1,0 +1,22 @@
+{
+  "middle": {
+    "letters": ["ა", "თ", "ი", "ო"],
+    "shadedZones": ["middle"],
+    "bottomLine": 3
+  },
+  "middle_upper": {
+    "letters": ["ბ", "ზ", "მ", "ნ", "პ", "რ", "ს", "შ", "ჩ", "ძ", "წ", "ხ", "ჰ"],
+    "shadedZones": ["top", "middle"],
+    "bottomLine": 3
+  },
+  "middle_lower": {
+    "letters": ["გ", "დ", "ე", "ვ", "კ", "ლ", "ჟ", "უ", "ფ", "ღ", "ყ", "ც"],
+    "shadedZones": ["middle", "bottom"],
+    "bottomLine": 4
+  },
+  "middle_upper_lower": {
+    "letters": ["ტ", "ქ", "ჭ", "ჯ"],
+    "shadedZones": ["top", "middle", "bottom"],
+    "bottomLine": 4
+  }
+}

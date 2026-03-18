@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useAuthUser } from '../store/auth';
-import AdminShell from '../components/AdminShell';
+import AdminShell from '../components/admin/AdminShell';
 import {
   fetchLessons, createLesson, deleteLesson, type Lesson,
 } from '../api/lessons';

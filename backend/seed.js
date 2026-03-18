@@ -2,7 +2,7 @@
 // Usage: node seed.js
 
 const mysql  = require('mysql2/promise');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const DB = {
   host:     process.env.DB_HOST     || 'localhost',
@@ -29,6 +29,26 @@ async function seed() {
     );
     console.log(`✓ ${u.role.padEnd(5)}  ${u.email}  (password: ${u.password})`);
   }
+
+  // Ensure we have a clean set of lessons (only 1-7)
+  await conn.execute('DELETE FROM lessons');
+  await conn.execute('ALTER TABLE lessons AUTO_INCREMENT = 1');
+  const lessons = [
+    'Lesson 1',
+    'Lesson 2',
+    'Lesson 3',
+    'Lesson 4',
+    'Lesson 5',
+    'Lesson 6',
+    'Lesson 7',
+  ];
+  for (let i = 0; i < lessons.length; i++) {
+    await conn.execute(
+      'INSERT INTO lessons (title, sort_order) VALUES (?, ?)',
+      [lessons[i], i + 1]
+    );
+  }
+  console.log(`✓ Seeded ${lessons.length} lessons (1-7)`);
 
   await conn.end();
   console.log('\nDone.');

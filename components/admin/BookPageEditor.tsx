@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { type PageDraft } from '../constants/cards';
+import { type PageDraft } from '../../constants/cards';
 
 export default function BookPageEditor({ pages, onChange }: { pages: PageDraft[]; onChange: (pages: PageDraft[]) => void }) {
   function update(i: number, field: keyof PageDraft, value: string) {

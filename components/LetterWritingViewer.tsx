@@ -8,14 +8,30 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Svg, { Line, Path } from 'react-native-svg';
+import Svg, { Line, Path, Rect } from 'react-native-svg';
 import type { CardData } from '../api/cards';
+import ZONES from '../constants/georgianLetterZones.json';
 
-// Zaner-Bloser paper line positions within the canvas
-const CANVAS_H  = 290;
-const LINE_TOP  = 26;   // headline  — solid blue
-const LINE_MID  = 158;  // midline   — dashed red
-const LINE_BASE = 252;  // baseline  — solid blue
+// 4 equal-gap Zaner-Bloser lines, all solid #86b9db
+// Creates 3 writing zones: top (ascender), middle (body), bottom (descender)
+const CANVAS_H = 290;
+const LINE_GAP = 79;
+const LINE_1   = 26;              // ascender line
+const LINE_2   = LINE_1 + LINE_GAP; // 105 — top of middle zone
+const LINE_3   = LINE_2 + LINE_GAP; // 184 — baseline
+const LINE_4   = LINE_3 + LINE_GAP; // 263 — descender line
+const LINE_COLOR      = '#86b9db';
+// Guide letter: font sized so it fills exactly one section (middle zone)
+const GUIDE_FONT_SIZE = LINE_GAP;
+
+type ZoneEntry = { letters: string[]; shadedZones: string[]; bottomLine: number };
+const ZONE_ENTRIES = Object.values(ZONES) as ZoneEntry[];
+
+function getZoneEntry(letter: string): ZoneEntry {
+  return ZONE_ENTRIES.find(z => z.letters.includes(letter)) ?? ZONES.middle as ZoneEntry;
+}
+
+const LINE_BY_NUMBER: Record<number, number> = { 1: LINE_1, 2: LINE_2, 3: LINE_3, 4: LINE_4 };
 
 type Props = { card: CardData; onClose: () => void };
 
@@ -23,6 +39,10 @@ export default function LetterWritingViewer({ card, onClose }: Props) {
   const c            = card.content ?? {};
   const letter       = String(c.letter       ?? '');
   const instructions = String(c.instructions ?? '');
+  const zoneEntry    = getZoneEntry(letter);
+  const showTop      = zoneEntry.shadedZones.includes('top');
+  const showBottom   = zoneEntry.shadedZones.includes('bottom');
+  const guideBottom  = CANVAS_H - LINE_BY_NUMBER[zoneEntry.bottomLine];
 
   const [strokes, setStrokes]         = useState<string[]>([]);
   const [currentPath, setCurrentPath] = useState('');
@@ -81,7 +101,7 @@ export default function LetterWritingViewer({ card, onClose }: Props) {
             <View style={lw.canvasContainer}>
               {/* Grey letter guide — top-left corner, pointer-events none */}
               {letter ? (
-                <Text style={lw.letterGuide} pointerEvents="none">
+                <Text style={[lw.letterGuide, { bottom: guideBottom }]} pointerEvents="none">
                   {letter}
                 </Text>
               ) : null}
@@ -89,15 +109,23 @@ export default function LetterWritingViewer({ card, onClose }: Props) {
               {/* SVG layer: Zaner-Bloser lines + user strokes */}
               <View style={StyleSheet.absoluteFill} {...panResponder.panHandlers}>
                 <Svg width="100%" height="100%">
-                  {/* Headline — solid blue */}
-                  <Line x1="0" y1={LINE_TOP} x2="10000" y2={LINE_TOP}
-                    stroke="#4A90D9" strokeWidth={1.5} />
-                  {/* Midline — dashed red */}
-                  <Line x1="0" y1={LINE_MID} x2="10000" y2={LINE_MID}
-                    stroke="#EF4444" strokeWidth={1} strokeDasharray="8,6" />
-                  {/* Baseline — solid blue */}
-                  <Line x1="0" y1={LINE_BASE} x2="10000" y2={LINE_BASE}
-                    stroke="#4A90D9" strokeWidth={1.5} />
+                  {/* Zone shading — active writing area */}
+                  {showTop && (
+                    <Rect x="0" y={LINE_1} width="10000" height={LINE_GAP}
+                      fill="#86b9db" fillOpacity={0.10} />
+                  )}
+                  <Rect x="0" y={LINE_2} width="10000" height={LINE_GAP}
+                    fill="#86b9db" fillOpacity={0.10} />
+                  {showBottom && (
+                    <Rect x="0" y={LINE_3} width="10000" height={LINE_GAP}
+                      fill="#86b9db" fillOpacity={0.10} />
+                  )}
+
+                  {/* 4 equal Zaner-Bloser lines — all solid #86b9db */}
+                  <Line x1="0" y1={LINE_1} x2="10000" y2={LINE_1} stroke={LINE_COLOR} strokeWidth={1.5} />
+                  <Line x1="0" y1={LINE_2} x2="10000" y2={LINE_2} stroke={LINE_COLOR} strokeWidth={1.5} />
+                  <Line x1="0" y1={LINE_3} x2="10000" y2={LINE_3} stroke={LINE_COLOR} strokeWidth={1.5} />
+                  <Line x1="0" y1={LINE_4} x2="10000" y2={LINE_4} stroke={LINE_COLOR} strokeWidth={1.5} />
 
                   {/* Completed strokes */}
                   {strokes.map((d, i) => (
@@ -212,13 +240,12 @@ const lw = StyleSheet.create({
   },
 
   letterGuide: {
-    fontSize: 200,
+    fontSize: GUIDE_FONT_SIZE,
     color: '#D1D5DB',
     fontWeight: '700',
     position: 'absolute',
     left: 8,
-    top: 10,
-    lineHeight: CANVAS_H,
+    // `bottom` is applied dynamically per zone
   },
 
   divider: { width: '85%', height: 1, backgroundColor: '#E5E7EB' },

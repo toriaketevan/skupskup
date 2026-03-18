@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS lessons (
 
 CREATE TABLE IF NOT EXISTS cards (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  type        ENUM('new_letter','sound_story','letter_writing','word_reading','book','letter_review','alphabet_song','quick_check','comprehension') NOT NULL,
+  type        ENUM('new_letter','sound_story','letter_writing','letter_tracing','word_reading','book','letter_review','alphabet_song','quick_check','comprehension') NOT NULL,
   sort_order  INT NOT NULL DEFAULT 0,
   title       VARCHAR(255) DEFAULT NULL,
   content     JSON,
@@ -38,14 +38,10 @@ CREATE TABLE IF NOT EXISTS lesson_cards (
 );
 
 INSERT INTO lessons (title, sort_order) VALUES
-  ('Lesson 1',  1),  ('Lesson 2',  2),  ('Lesson 3',  3),
-  ('Lesson 4',  4),  ('Lesson 5',  5),  ('Lesson 6',  6),
-  ('Lesson 7',  7),  ('Lesson 8',  8),  ('Lesson 9',  9),
-  ('Lesson 10', 10), ('Lesson 11', 11), ('Lesson 12', 12),
-  ('Lesson 13', 13), ('Lesson 14', 14), ('Lesson 15', 15),
-  ('Lesson 16', 16), ('Lesson 17', 17), ('Lesson 18', 18),
-  ('Lesson 19', 19), ('Lesson 20', 20), ('Lesson 21', 21),
-  ('Lesson 22', 22), ('Lesson 23', 23), ('Lesson 24', 24),
-  ('Lesson 25', 25), ('Lesson 26', 26), ('Lesson 27', 27),
-  ('Lesson 28', 28), ('Lesson 29', 29), ('Lesson 30', 30),
-  ('Lesson 31', 31), ('Lesson 32', 32), ('Lesson 33', 33);
+  ('Lesson 1', 1),
+  ('Lesson 2', 2),
+  ('Lesson 3', 3),
+  ('Lesson 4', 4),
+  ('Lesson 5', 5),
+  ('Lesson 6', 6),
+  ('Lesson 7', 7);

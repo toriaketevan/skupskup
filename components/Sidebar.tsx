@@ -2,12 +2,13 @@ import { router, usePathname } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthUser } from '../store/auth';
+import { colors } from '../app/colors';
 
 const ITEMS = [
-  { path: '/',       label: 'გაკვეთილები', emoji: '📝', color: '#FF6B6B' },
-  { path: '/books',  label: 'წიგნები',     emoji: '📖', color: '#4ECDC4' },
-  { path: '/games',  label: 'თამაშები',    emoji: '🎮', color: '#A29BFE' },
-  { path: '/videos', label: 'ვიდეოები',    emoji: '📺', color: '#FD79A8' },
+  { path: '/',       label: 'გაკვეთილები', emoji: '📝', color: colors.secondary.playfulPurple },
+  { path: '/books',  label: 'წიგნები',     emoji: '📖', color: colors.primary.water },
+  { path: '/games',  label: 'თამაშები',    emoji: '🎮', color: colors.accent.actionOrange },
+  { path: '/videos', label: 'ვიდეოები',    emoji: '📺', color: colors.secondary.roofPink },
 ] as const;
 
 const ADMIN_ITEM = { path: '/admin', label: 'ადმინი', emoji: '⚙️', color: '#374151' } as const;
@@ -36,7 +37,7 @@ export default function Sidebar() {
             <View
               style={[
                 styles.iconCircle,
-                isActive ? { backgroundColor: item.color } : { backgroundColor: '#F0F2F5' },
+                isActive ? { backgroundColor: item.color } : { backgroundColor: colors.secondary.cardBackground },
               ]}
             >
               <Text style={styles.emoji}>{item.emoji}</Text>
@@ -63,7 +64,7 @@ export default function Sidebar() {
               <View
                 style={[
                   styles.iconCircle,
-                  isActive ? { backgroundColor: ADMIN_ITEM.color } : { backgroundColor: '#F0F2F5' },
+                  isActive ? { backgroundColor: ADMIN_ITEM.color } : { backgroundColor: colors.secondary.cardBackground },
                 ]}
               >
                 <Text style={styles.emoji}>{ADMIN_ITEM.emoji}</Text>
@@ -82,7 +83,7 @@ export default function Sidebar() {
 const styles = StyleSheet.create({
   sidebar: {
     width: 80,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.primary.grassLight,
     borderLeftWidth: 1,
     borderLeftColor: '#EAECEF',
     alignItems: 'center',

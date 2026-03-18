@@ -1,3 +1,4 @@
+import LottieView from 'lottie-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import {
@@ -20,6 +21,7 @@ import { useAuthUser } from '../../store/auth';
 import type { CardData } from '../../api/cards';
 import TracingReader from '../../components/TracingReader';
 import LetterWritingViewer from '../../components/LetterWritingViewer';
+import LetterTracingViewer from '../../components/LetterTracingViewer';
 import { NEW_LETTER_SECTIONS, getDefaultNLSections, type NLSection } from '../../constants/cards';
 
 const CARD_W = 200;
@@ -29,6 +31,7 @@ const CARD_LABELS: Record<string, string> = {
   new_letter:     'ახალი ასო',
   sound_story:    'ბგერის ისტორია',
   letter_writing: 'ასოს წერა',
+  letter_tracing: 'ასოს ამოწერა',
   word_reading:   'სიტყვის კითხვა',
   book:           'წიგნი',
   letter_review:  'ასოების გამეორება',
@@ -51,7 +54,7 @@ function parseBookPages(card: CardData): BookPage[] {
   return [{ text: raw.content ?? '' }];
 }
 
-function BookViewer({ card, onClose }: { card: CardData; onClose: () => void }) {
+function BookViewer({ card, onClose, onComplete }: { card: CardData; onClose: () => void; onComplete?: () => void }) {
   const { width: SW, height: SH } = useWindowDimensions();
   const slideAnim = useRef(new Animated.Value(0)).current;
   const btnAnim   = useRef(new Animated.Value(0)).current;
@@ -86,7 +89,7 @@ function BookViewer({ card, onClose }: { card: CardData; onClose: () => void }) 
       Animated.timing(btnAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
     ]).start();
     if (!isLast) slideTo(pageIdx + 1);
-    else onClose();
+    else { onClose(); onComplete?.(); }
   }
 
   function handlePrev() {
@@ -328,7 +331,7 @@ function VideoPlaceholder({ url }: { url?: string }) {
   );
 }
 
-function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => void }) {
+function NewLetterViewer({ card, onClose, onComplete }: { card: CardData; onClose: () => void; onComplete?: () => void }) {
   const c = card.content ?? {};
   const letter = String(c.letter ?? '');
   const rawSections: Record<string, NLSection> = c.sections ?? getDefaultNLSections();
@@ -342,9 +345,21 @@ function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => voi
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [pageHeight, setPageHeight] = useState(0);
+  const [showReward, setShowReward] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
   function goTo(i: number) {
+    if (i >= visibleSteps.length) {
+      // Last slide passed — show confetti, then close and trigger card badge
+      setShowReward(true);
+      // TODO: play rewarding sound here
+      setTimeout(() => {
+        setShowReward(false);
+        onClose();
+        onComplete?.(); // fire after viewer closes so badge animation starts fresh
+      }, 2500);
+      return;
+    }
     const clamped = Math.max(0, Math.min(i, visibleSteps.length - 1));
     setActiveIdx(clamped);
     if (pageHeight > 0) {
@@ -436,7 +451,11 @@ function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => voi
                 <Text style={nl.arrowText}>↑</Text>
               </Pressable>
               <Pressable
-                style={({ pressed }) => [nl.arrowBtn, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [
+                  nl.arrowBtn,
+                  activeIdx === visibleSteps.length - 1 && nl.arrowBtnLast,
+                  pressed && { opacity: 0.7 },
+                ]}
                 onPress={() => goTo(activeIdx + 1)}
               >
                 <Text style={nl.arrowText}>↓</Text>
@@ -445,6 +464,21 @@ function NewLetterViewer({ card, onClose }: { card: CardData; onClose: () => voi
 
           </View>
         </SafeAreaView>
+
+        {/* ─── Reward overlay ──────────────────────────────────────────── */}
+        {showReward && (
+          <View style={nl.rewardOverlay}>
+            {/* TODO: play rewarding sound here (e.g. expo-av) */}
+            <LottieView
+              source={require('../Confetti.json')}
+              autoPlay
+              loop={false}
+              style={nl.rewardLottie}
+            />
+            <Text style={nl.rewardText}>შესანიშნავია!</Text>
+          </View>
+        )}
+
       </View>
     </Modal>
   );
@@ -523,6 +557,18 @@ const nl = StyleSheet.create({
     color: '#fff', textAlign: 'center',
   },
 
+  // Reward overlay
+  rewardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(30, 27, 75, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    zIndex: 20,
+  },
+  rewardLottie: { width: '100%', height: '100%', position: 'absolute' },
+  rewardText: { fontSize: 28, fontWeight: '800', color: '#FDE68A', textAlign: 'center' },
+
   // Right arrow col — stacked, centered vertically
   arrowCol: {
     width: 48,
@@ -534,6 +580,9 @@ const nl = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.12)',
     justifyContent: 'center', alignItems: 'center',
+  },
+  arrowBtnLast: {
+    backgroundColor: '#F2D35E',
   },
   arrowText: { fontSize: 18, color: '#fff', fontWeight: '700' },
 });
@@ -569,7 +618,20 @@ function CardPopup({ card, index, onClose }: { card: CardData; index: number; on
   );
 }
 
-function GameCard({ card, index, onPress }: { card: CardData; index: number; onPress: () => void }) {
+function RewardBadge() {
+  return (
+    <View style={styles.rewardBadge} pointerEvents="none">
+      <LottieView
+        source={require('../Rewards.json')}
+        autoPlay
+        loop={false}
+        style={styles.rewardBadgeLottie}
+      />
+    </View>
+  );
+}
+
+function GameCard({ card, index, onPress, isCompleted }: { card: CardData; index: number; onPress: () => void; isCompleted?: boolean }) {
   return (
     <View style={styles.cardWrapper}>
       <Pressable
@@ -577,6 +639,7 @@ function GameCard({ card, index, onPress }: { card: CardData; index: number; onP
         onPress={onPress}
       >
         <Text style={styles.cardNumber}>{index + 1}</Text>
+        {isCompleted && <RewardBadge />}
       </Pressable>
       <Text style={styles.cardLabel} numberOfLines={2}>
         {CARD_LABELS[card.type] ?? card.type.replace(/_/g, ' ')}
@@ -595,6 +658,11 @@ export default function LessonScreen() {
   const [cards, setCards]           = useState<CardData[]>([]);
   const [loading, setLoading]       = useState(true);
   const [openCard, setOpenCard]     = useState<{ card: CardData; index: number } | null>(null);
+  const [completedCards, setCompletedCards] = useState<Set<number>>(new Set());
+
+  function markCardComplete(cardId: number) {
+    setCompletedCards(prev => new Set(prev).add(cardId));
+  }
 
   useEffect(() => {
     Promise.all([
@@ -632,11 +700,21 @@ export default function LessonScreen() {
 
       {/* Card popup — book, new_letter, or generic */}
       {openCard && openCard.card.type === 'book' ? (
-        <BookViewer card={openCard.card} onClose={() => setOpenCard(null)} />
+        <BookViewer
+          card={openCard.card}
+          onClose={() => setOpenCard(null)}
+          onComplete={() => markCardComplete(openCard.card.id)}
+        />
       ) : openCard && openCard.card.type === 'new_letter' ? (
-        <NewLetterViewer card={openCard.card} onClose={() => setOpenCard(null)} />
+        <NewLetterViewer
+          card={openCard.card}
+          onClose={() => setOpenCard(null)}
+          onComplete={() => markCardComplete(openCard.card.id)}
+        />
       ) : openCard && openCard.card.type === 'letter_writing' ? (
         <LetterWritingViewer card={openCard.card} onClose={() => setOpenCard(null)} />
+      ) : openCard && openCard.card.type === 'letter_tracing' ? (
+        <LetterTracingViewer card={openCard.card} onClose={() => setOpenCard(null)} />
       ) : openCard ? (
         <CardPopup
           card={openCard.card}
@@ -666,6 +744,7 @@ export default function LessonScreen() {
               card={card}
               index={i}
               onPress={() => setOpenCard({ card, index: i })}
+              isCompleted={completedCards.has(card.id)}
             />
           ))}
         </ScrollView>
@@ -707,6 +786,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 24,
   },
+
+  rewardBadge: {
+    position: 'absolute',
+    top: -120,
+    right: -120,
+    width: 320,
+    height: 320,
+    zIndex: 10,
+  },
+  rewardBadgeLottie: { width: 320, height: 320 },
 
   cardWrapper: { alignItems: 'center', gap: 8 },
   card: {

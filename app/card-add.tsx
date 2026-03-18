@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import AdminShell from '../components/AdminShell';
+import AdminShell from '../components/admin/AdminShell';
 import { useAuthUser } from '../store/auth';
 import { createCard, type Card } from '../api/cards';
 import TracingReader from '../components/TracingReader';
@@ -19,7 +19,7 @@ import {
   type PageDraft, type NLSection,
   buildContent, getDefaultNLSections,
 } from '../constants/cards';
-import BookPageEditor from '../components/BookPageEditor';
+import BookPageEditor from '../components/admin/BookPageEditor';
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
@@ -29,7 +29,6 @@ export default function CardAddScreen() {
   const [title, setTitle]               = useState('');
   const [fieldValues, setFieldValues]   = useState<Record<string, string>>({});
   const [bookPages, setBookPages]       = useState<PageDraft[]>([{ text: '', image: '' }]);
-  const [fastSound, setFastSound]       = useState(false);
   const [nlSections, setNlSections]     = useState<Record<string, NLSection>>(getDefaultNLSections());
   const [saving, setSaving]             = useState(false);
   const [error, setError]               = useState<string | null>(null);
@@ -53,7 +52,6 @@ export default function CardAddScreen() {
       setTitle('');
       setFieldValues({});
       setBookPages([{ text: '', image: '' }]);
-      setFastSound(false);
       setNlSections(getDefaultNLSections());
       setError(null);
     } else {
@@ -69,7 +67,7 @@ export default function CardAddScreen() {
       const content = selectedType === 'book'
         ? { pages: bookPages.filter(p => p.text.trim() || p.image.trim()) }
         : selectedType === 'new_letter'
-          ? { ...buildContent(selectedType, fieldValues), fast_sound: fastSound, sections: nlSections }
+          ? { ...buildContent(selectedType, fieldValues), sections: nlSections }
           : buildContent(selectedType, fieldValues);
       await createCard({ type: selectedType, title: title.trim() || undefined, content });
       router.canGoBack() ? router.back() : router.replace('/admin');
@@ -142,16 +140,6 @@ export default function CardAddScreen() {
                       <Text style={styles.previewHint}>ასო შეიყვანეთ ქვემოთ — პრივიუ გამოჩნდება</Text>
                     )}
                   </View>
-                )}
-
-                {/* Fast / slow sound toggle — new_letter only */}
-                {selectedType === 'new_letter' && (
-                  <Pressable style={styles.checkRow} onPress={() => setFastSound(v => !v)}>
-                    <View style={[styles.checkbox, fastSound && styles.checkboxChecked]}>
-                      {fastSound && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                    <Text style={styles.checkLabel}>სწრაფი ბგერა</Text>
-                  </Pressable>
                 )}
 
                 {/* Generic fields */}

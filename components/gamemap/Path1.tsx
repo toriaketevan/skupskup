@@ -1,4 +1,4 @@
-import Path1Svg from '../assets/map/path1.svg';
+import Path1Svg from '../../assets/map/path1.svg';
 
 type Props = {
   width?: number;

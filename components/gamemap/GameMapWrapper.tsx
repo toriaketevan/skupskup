@@ -1,15 +1,16 @@
 import { StyleSheet, View } from 'react-native';
 
-export const MAP_H = 2000;
+type Props = {
+  height: number;
+};
 
-export default function GameMap() {
-  return <View style={styles.map} />;
+export default function GameMapWrapper({ height }: Props) {
+  return <View style={[styles.map, { height }]} />;
 }
 
 const styles = StyleSheet.create({
   map: {
     width: '100%',
-    height: MAP_H,
     backgroundColor: '#5ae182',
   },
 });

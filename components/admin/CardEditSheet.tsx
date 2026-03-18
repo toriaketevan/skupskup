@@ -10,9 +10,9 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { fetchCard, updateCard, deleteCard, type CardData } from '../api/cards';
-import TracingReader from './TracingReader';
-import { CARD_TYPES, CONTENT_FIELDS, type PageDraft, parseBookPages, contentToFieldValues, buildContent } from '../constants/cards';
+import { fetchCard, updateCard, deleteCard, type CardData } from '../../api/cards';
+import TracingReader from '../TracingReader';
+import { CARD_TYPES, CONTENT_FIELDS, type PageDraft, parseBookPages, contentToFieldValues, buildContent } from '../../constants/cards';
 import BookPageEditor from './BookPageEditor';
 
 // ─── Sheet ─────────────────────────────────────────────────────────────────────
@@ -29,7 +29,6 @@ export default function CardEditSheet({ cardId, onClose, onSaved, onDeleted }: P
   const [title, setTitle]             = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookPages, setBookPages]     = useState<PageDraft[]>([{ text: '', image: '' }]);
-  const [fastSound, setFastSound]     = useState(false);
   const [loading, setLoading]         = useState(false);
   const [saving, setSaving]           = useState(false);
   const [saved, setSaved]             = useState(false);
@@ -53,7 +52,7 @@ export default function CardEditSheet({ cardId, onClose, onSaved, onDeleted }: P
         } else {
           setFieldValues(contentToFieldValues(c.type, content));
         }
-        setFastSound(c.type === 'new_letter' ? Boolean(content.fast_sound) : false);
+
       })
       .catch(() => setError('ბარათი ვერ ჩაიტვირთა.'))
       .finally(() => setLoading(false));
@@ -69,7 +68,7 @@ export default function CardEditSheet({ cardId, onClose, onSaved, onDeleted }: P
         content = { pages: bookPages.filter(p => p.text.trim() || p.image.trim()) };
       } else {
         content = buildContent(card.type, fieldValues);
-        if (card.type === 'new_letter') content.fast_sound = fastSound;
+
       }
       const updated = await updateCard(card.id, { title: title.trim() || undefined, content });
       onSaved(updated);
@@ -190,14 +189,7 @@ export default function CardEditSheet({ cardId, onClose, onSaved, onDeleted }: P
                   </View>
                 ))}
 
-                {card.type === 'new_letter' && (
-                  <Pressable style={styles.checkRow} onPress={() => setFastSound(v => !v)}>
-                    <View style={[styles.checkbox, fastSound && styles.checkboxChecked]}>
-                      {fastSound && <Text style={styles.checkmark}>✓</Text>}
-                    </View>
-                    <Text style={styles.checkLabel}>სწრაფი ბგერა</Text>
-                  </Pressable>
-                )}
+
               </>
             )}
 
@@ -275,16 +267,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', minHeight: 130, justifyContent: 'center',
   },
   previewHint: { fontSize: 13, color: '#A78BFA', textAlign: 'center' },
-
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  checkbox: {
-    width: 22, height: 22, borderRadius: 6,
-    borderWidth: 2, borderColor: '#D1D5DB', backgroundColor: '#fff',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  checkboxChecked: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
-  checkmark:  { color: '#fff', fontSize: 13, fontWeight: '700' },
-  checkLabel: { fontSize: 15, color: '#374151', fontWeight: '500' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center' },
   dialog:  { width: 300, backgroundColor: '#fff', borderRadius: 16, padding: 24, gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.2, shadowRadius: 16, elevation: 10 },

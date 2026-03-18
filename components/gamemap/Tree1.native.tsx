@@ -1,4 +1,4 @@
-import Tree1Svg from '../assets/map/tree1.svg';
+import Tree1Svg from '../../assets/map/tree1.svg';
 
 type Props = {
   width?: number;

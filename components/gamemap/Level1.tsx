@@ -1,4 +1,4 @@
-import Level1Svg from '../assets/map/level1.svg';
+import Level1Svg from '../../assets/map/level1.svg';
 
 type Props = {
   width?: number;

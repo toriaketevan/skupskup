@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useGlobalSearchParams } from 'expo-router';
-import AdminShell from '../components/AdminShell';
+import AdminShell from '../components/admin/AdminShell';
 import { useAuthUser } from '../store/auth';
 import { fetchCard, updateCard, deleteCard, type CardData } from '../api/cards';
 import TracingReader from '../components/TracingReader';
@@ -20,7 +20,7 @@ import {
   type PageDraft, type NLSection,
   parseBookPages, contentToFieldValues, buildContent, getDefaultNLSections,
 } from '../constants/cards';
-import BookPageEditor from '../components/BookPageEditor';
+import BookPageEditor from '../components/admin/BookPageEditor';
 
 // ─── Screen ────────────────────────────────────────────────────────────────────
 
