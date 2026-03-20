@@ -25,8 +25,8 @@ import { fetchCards, type CardData, type Card } from '../api/cards';
 import CardEditSheet from '../components/admin/CardEditSheet';
 import { CARD_TYPES } from '../constants/cards';
 
-function typeMeta(type: Card) {
-  return CARD_TYPES.find(t => t.key === type)!;
+function typeMeta(type: string) {
+  return CARD_TYPES.find(t => t.key === type) ?? { label: type, emoji: '?', color: '#9CA3AF' };
 }
 
 function AssignedCardRow({

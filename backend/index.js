@@ -29,6 +29,18 @@ pool.query(`
   )
 `).catch(err => console.error('Migration error:', err.message));
 
+// Ensure user_card_progress table exists
+pool.query(`
+  CREATE TABLE IF NOT EXISTS user_card_progress (
+    user_id  INT NOT NULL,
+    card_id  INT NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, card_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (card_id) REFERENCES cards(id)  ON DELETE CASCADE
+  )
+`).catch(err => console.error('Migration error (card_progress):', err.message));
+
 // Add description column to lessons if it doesn't exist yet
 pool.query(`ALTER TABLE lessons ADD COLUMN description TEXT DEFAULT NULL`)
   .catch(err => { if (err.code !== 'ER_DUP_FIELDNAME') console.error('Migration error (description):', err.message); });
@@ -360,6 +372,36 @@ app.post('/users/:id/progress/:lessonId', async (req, res) => {
 });
 
 module.exports = { app, pool };
+
+// ─── Card progress ────────────────────────────────────────────────────────────
+
+// GET /users/:id/card-progress/:lessonId
+app.get('/users/:id/card-progress/:lessonId', async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT ucp.card_id FROM user_card_progress ucp
+       JOIN lesson_cards lc ON lc.card_id = ucp.card_id
+       WHERE ucp.user_id = ? AND lc.lesson_id = ?`,
+      [req.params.id, req.params.lessonId]
+    );
+    res.json(rows.map(r => r.card_id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /users/:id/card-progress/:cardId
+app.post('/users/:id/card-progress/:cardId', async (req, res) => {
+  try {
+    await pool.query(
+      'INSERT IGNORE INTO user_card_progress (user_id, card_id) VALUES (?, ?)',
+      [req.params.id, req.params.cardId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 if (require.main === module) {
   const PORT = process.env.PORT || 3001;

@@ -1,3 +1,4 @@
+import { useFonts } from 'expo-font';
 import { router, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -5,6 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Sidebar from '../components/Sidebar';
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Datebashvili: require('../assets/fonts/datebashvili-2.0.ttf'),
+    Anton: require('../assets/fonts/Anton-Regular.ttf'),
+  });
+
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.root}>

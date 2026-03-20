@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS lessons (
 
 CREATE TABLE IF NOT EXISTS cards (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  type        ENUM('new_letter','sound_story','letter_writing','letter_tracing','word_reading','book','letter_review','alphabet_song','quick_check','comprehension') NOT NULL,
+  type        ENUM('new_letter','sound_story','letter_writing','word_reading','book','letter_review','alphabet_song','quick_check','comprehension') NOT NULL,
   sort_order  INT NOT NULL DEFAULT 0,
   title       VARCHAR(255) DEFAULT NULL,
   content     JSON,

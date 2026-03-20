@@ -1,7 +1,7 @@
 import { API_BASE as BASE } from './config';
 
 export type Card =
-  | 'new_letter' | 'sound_story' | 'letter_writing' | 'letter_tracing' | 'word_reading'
+  | 'new_letter' | 'sound_story' | 'letter_writing' | 'word_reading'
   | 'book' | 'letter_review' | 'alphabet_song' | 'quick_check' | 'comprehension';
 
 export type CardData = {

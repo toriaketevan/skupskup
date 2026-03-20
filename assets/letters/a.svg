@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="215.21066"
+   height="266.48969"
+   viewBox="0 0 215.21066 266.48969"
+   version="1.1"
+   xml:space="preserve"
+   id="SVGRoot"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+   id="defs2" />
+
+<style
+   type="text/css"
+   id="style1">
+g.prefab path {
+  vector-effect:non-scaling-stroke;
+  -inkscape-stroke:hairline;
+  fill: none;
+  fill-opacity: 1;
+  stroke-opacity: 1;
+  stroke: #00349c;
+}
+</style>
+
+<g
+   id="layer4"
+   style="display:inline"
+   transform="translate(-351.5893,-313.90112)"><path
+     style="display:inline;fill:none;stroke:#000000;stroke-width:22;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+     d="m 362.75366,465.27101 c 0,0 -7.88594,102.51733 89.89983,104.09452 97.78577,1.57719 111.5081,-67.36928 99.36296,-111.98047 -14.30528,-52.54576 -82.34128,-83.98275 -93.0542,-96.20859 -10.71292,-12.22585 -11.04033,-34.69818 -11.04033,-36.27536"
+     id="path3" /></g></svg>

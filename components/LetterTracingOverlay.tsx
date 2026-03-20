@@ -1,5 +1,6 @@
-import { useRef, useMemo, useState } from 'react';
+import { useRef, useMemo, useState, useEffect } from 'react';
 import { StyleSheet, View, PanResponder } from 'react-native';
+import { Audio } from 'expo-av';
 import LottieView from 'lottie-react-native';
 import Svg, { Circle, Line, Path, Polygon, G } from 'react-native-svg';
 import STROKES from '../constants/georgianLetterStrokes.json';
@@ -101,9 +102,26 @@ export default function LetterTracingOverlay({ letter, canvasWidth, canvasHeight
     () => (data ? startPoints[0] ?? null : null)
   );
 
-  const activeIdxRef   = useRef(0);
-  const strokeStarted  = useRef(false);
-  const nextSampleIdx  = useRef(0);
+  const activeIdxRef    = useRef(0);
+  const strokeStarted   = useRef(false);
+  const nextSampleIdx   = useRef(0);
+  const chimeRef        = useRef<Audio.Sound | null>(null);
+  const fanfareRef      = useRef<Audio.Sound | null>(null);
+  const canvasWidthRef  = useRef(canvasWidth);
+  const canvasHeightRef = useRef(canvasHeight);
+  canvasWidthRef.current  = canvasWidth;
+  canvasHeightRef.current = canvasHeight;
+
+  useEffect(() => {
+    let chime: Audio.Sound, fanfare: Audio.Sound;
+    (async () => {
+      ({ sound: chime }   = await Audio.Sound.createAsync(require('../assets/sounds/stroke-complete.wav')));
+      ({ sound: fanfare } = await Audio.Sound.createAsync(require('../assets/sounds/celebration.wav')));
+      chimeRef.current   = chime;
+      fanfareRef.current = fanfare;
+    })();
+    return () => { chime?.unloadAsync(); fanfare?.unloadAsync(); };
+  }, []);
 
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -155,10 +173,12 @@ export default function LetterTracingOverlay({ letter, canvasWidth, canvasHeight
         strokeStarted.current = false;
         const nextIdx = idx + 1;
         if (nextIdx < data.strokes.length) {
+          chimeRef.current?.replayAsync();
           activeIdxRef.current = nextIdx;
           nextSampleIdx.current = 0;
           setArrowPos(startPoints[nextIdx] ?? null);
         } else {
+          fanfareRef.current?.replayAsync();
           setArrowPos(null);
           setShowSparks(true);
         }

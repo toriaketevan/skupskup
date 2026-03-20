@@ -15,30 +15,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { markComplete } from '../../store/progress';
-import { markLessonComplete } from '../../api/progress';
+import { markLessonComplete, fetchCardProgress, markCardComplete as apiMarkCardComplete } from '../../api/progress';
 import { fetchLesson, fetchLessonCards, type Lesson } from '../../api/lessons';
 import { useAuthUser } from '../../store/auth';
 import type { CardData } from '../../api/cards';
+import ConfettiReward from '../../components/ConfettiReward';
 import TracingReader from '../../components/TracingReader';
 import LetterWritingViewer from '../../components/LetterWritingViewer';
-import LetterTracingViewer from '../../components/LetterTracingViewer';
-import { NEW_LETTER_SECTIONS, getDefaultNLSections, type NLSection } from '../../constants/cards';
+import { CARD_TYPES, NEW_LETTER_SECTIONS, getDefaultNLSections, type NLSection } from '../../constants/cards';
 
 const CARD_W = 200;
 const CARD_H = 280;
 
-const CARD_LABELS: Record<string, string> = {
-  new_letter:     'ახალი ასო',
-  sound_story:    'ბგერის ისტორია',
-  letter_writing: 'ასოს წერა',
-  letter_tracing: 'ასოს ამოწერა',
-  word_reading:   'სიტყვის კითხვა',
-  book:           'წიგნი',
-  letter_review:  'ასოების გამეორება',
-  alphabet_song:  'ანბანის სიმღერა',
-  quick_check:    'სწრაფი შემოწმება',
-  comprehension:  'გაგება-გააზრება',
-};
+const CARD_SVGS: Partial<Record<string, React.ComponentType<{ width: number; height: number }>>> =
+  Object.fromEntries(CARD_TYPES.filter(t => t.svg).map(t => [t.key, t.svg]));
+
 
 // ─── Book viewer ──────────────────────────────────────────────────────────────
 
@@ -465,19 +456,7 @@ function NewLetterViewer({ card, onClose, onComplete }: { card: CardData; onClos
           </View>
         </SafeAreaView>
 
-        {/* ─── Reward overlay ──────────────────────────────────────────── */}
-        {showReward && (
-          <View style={nl.rewardOverlay}>
-            {/* TODO: play rewarding sound here (e.g. expo-av) */}
-            <LottieView
-              source={require('../Confetti.json')}
-              autoPlay
-              loop={false}
-              style={nl.rewardLottie}
-            />
-            <Text style={nl.rewardText}>შესანიშნავია!</Text>
-          </View>
-        )}
+        <ConfettiReward visible={showReward} />
 
       </View>
     </Modal>
@@ -497,7 +476,7 @@ const nl = StyleSheet.create({
   },
   closeBtnText: { fontSize: 20, color: '#fff', fontWeight: '700' },
 
-  bodyRow: { flex: 1, flexDirection: 'row' },
+  bodyRow: { flex: 1, flexDirection: 'row', width: '100%', maxWidth: 600, alignSelf: 'center' },
 
   // Left bullet nav — centered vertically
   bulletNav: {
@@ -556,18 +535,6 @@ const nl = StyleSheet.create({
     fontSize: 140, fontWeight: '800',
     color: '#fff', textAlign: 'center',
   },
-
-  // Reward overlay
-  rewardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(30, 27, 75, 0.92)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
-    zIndex: 20,
-  },
-  rewardLottie: { width: '100%', height: '100%', position: 'absolute' },
-  rewardText: { fontSize: 28, fontWeight: '800', color: '#FDE68A', textAlign: 'center' },
 
   // Right arrow col — stacked, centered vertically
   arrowCol: {
@@ -632,18 +599,19 @@ function RewardBadge() {
 }
 
 function GameCard({ card, index, onPress, isCompleted }: { card: CardData; index: number; onPress: () => void; isCompleted?: boolean }) {
+  const CardSvg = CARD_SVGS[card.type];
   return (
     <View style={styles.cardWrapper}>
       <Pressable
-        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
+        style={({ pressed }) => [CardSvg ? styles.cardSvg : styles.card, pressed && { opacity: 0.85, transform: [{ scale: 0.97 }] }]}
         onPress={onPress}
       >
-        <Text style={styles.cardNumber}>{index + 1}</Text>
+        {CardSvg
+          ? <CardSvg width={CARD_W} height={CARD_H} />
+          : <Text style={styles.cardNumber}>{index + 1}</Text>
+        }
         {isCompleted && <RewardBadge />}
       </Pressable>
-      <Text style={styles.cardLabel} numberOfLines={2}>
-        {CARD_LABELS[card.type] ?? card.type.replace(/_/g, ' ')}
-      </Text>
     </View>
   );
 }
@@ -662,15 +630,16 @@ export default function LessonScreen() {
 
   function markCardComplete(cardId: number) {
     setCompletedCards(prev => new Set(prev).add(cardId));
+    if (user) apiMarkCardComplete(user.id, cardId).catch(() => {});
   }
 
   useEffect(() => {
-    Promise.all([
-      fetchLesson(lessonId),
-      fetchLessonCards(lessonId),
-    ]).then(([les, c]) => {
+    const fetches: Promise<any>[] = [fetchLesson(lessonId), fetchLessonCards(lessonId)];
+    if (user) fetches.push(fetchCardProgress(user.id, lessonId));
+    Promise.all(fetches).then(([les, c, completedIds]) => {
       setLesson(les);
       setCards(c);
+      if (completedIds) setCompletedCards(new Set(completedIds));
     }).finally(() => setLoading(false));
   }, [lessonId]);
 
@@ -712,9 +681,11 @@ export default function LessonScreen() {
           onComplete={() => markCardComplete(openCard.card.id)}
         />
       ) : openCard && openCard.card.type === 'letter_writing' ? (
-        <LetterWritingViewer card={openCard.card} onClose={() => setOpenCard(null)} />
-      ) : openCard && openCard.card.type === 'letter_tracing' ? (
-        <LetterTracingViewer card={openCard.card} onClose={() => setOpenCard(null)} />
+        <LetterWritingViewer
+          card={openCard.card}
+          onClose={() => setOpenCard(null)}
+          onComplete={() => markCardComplete(openCard.card.id)}
+        />
       ) : openCard ? (
         <CardPopup
           card={openCard.card}
@@ -736,6 +707,7 @@ export default function LessonScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={{ flex: 1 }}
           contentContainerStyle={styles.cardScroll}
         >
           {cards.map((card, i) => (
@@ -764,7 +736,7 @@ export default function LessonScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8F0' },
+  container: { flex: 1, backgroundColor: '#8cb6e0' },
 
   topBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -781,6 +753,7 @@ const styles = StyleSheet.create({
 
   cardScroll: {
     flexGrow: 1,
+    minHeight: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -789,15 +762,16 @@ const styles = StyleSheet.create({
 
   rewardBadge: {
     position: 'absolute',
-    top: -120,
-    right: -120,
-    width: 320,
-    height: 320,
+    bottom: -80,
+    right: -80,
+    width: 240,
+    height: 240,
     zIndex: 10,
   },
-  rewardBadgeLottie: { width: 320, height: 320 },
+  rewardBadgeLottie: { width: 240, height: 240 },
 
-  cardWrapper: { alignItems: 'center', gap: 8 },
+  cardWrapper: { alignItems: 'center', gap: 8, overflow: 'visible' },
+  cardSvg: { width: CARD_W, height: CARD_H },
   card: {
     width: CARD_W,
     height: CARD_H,
